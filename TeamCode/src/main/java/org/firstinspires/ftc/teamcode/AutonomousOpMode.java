@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 
-@Autonomous(name="Iron Golem Autonomous", group="Pushbot")
+@Autonomous(name="Iron Golem Autonomous", group="Mechanum Bot")
 public class AutonomousOpMode extends LinearOpMode {
 
     private ElapsedTime runtime = new ElapsedTime();
