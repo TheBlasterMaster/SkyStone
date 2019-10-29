@@ -21,8 +21,10 @@ public class AutonomousMotor{
     public AutonomousMotor(DcMotor incomingMotor, double encoderCount, double diameter){
         motor  = incomingMotor;
         motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER)
+
         COUNTS_PER_MOTOR_REV = encoderCount;
         WHEEL_DIAMETER_INCHES = diameter;
+
 
         COUNTS_PER_INCH=(COUNTS_PER_MOTOR_REV)/
                 (WHEEL_DIAMETER_INCHES*3.1415);

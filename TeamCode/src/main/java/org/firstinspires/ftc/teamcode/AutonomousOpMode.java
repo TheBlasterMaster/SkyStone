@@ -11,11 +11,54 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 public class AutonomousOpMode extends LinearOpMode {
 
     private ElapsedTime runtime = new ElapsedTime();
+    private AutonomousMotor frontLeftDrive = null;
+    private AutonomousMotor frontRightDrive = null;
+    private AutonomousMotor backLeftDrive = null;
+    private AutonomousMotor backRightDrive = null;
+
+    private final double widthOfRobot = 0;
+    private final double robotTurningCircumference = widthOfRobot * 2 * Math.PI;
+
+    private final AutonomousMotor[] movement = {frontLeftDrive,frontRightDrive,backLeftDrive,backRightDrive};
+    private double[] inchCounts = new double[4];
 
 
     @Override
     public void runOpMode() throws InterruptedException {
         //INSERT AUTONOMOUS CODE HERE. INITIALIZE AUTONOMOUS MOTORS.
+        DcMotor frntLft = hardwareMap.get(DcMotor.class, "front_left");
+        DcMotor frntRght = hardwareMap.get(DcMotor.class, "front_right");
+        DcMotor bckLft = hardwareMap.get(DcMotor.class, "back_left");
+        DcMotor bckRght = hardwareMap.get(DcMotor.class, "back_right");
+
+        frntLft.setDirection(DcMotor.Direction.REVERSE);
+        frntRght.setDirection(DcMotor.Direction.FORWARD);
+        bckLft.setDirection(DcMotor.Direction.REVERSE);
+        bckRght.setDirection(DcMotor.Direction.FORWARD);
+
+        frontLeftDrive  = new AutonomousMotor(frntLft, 2240, 4 );
+        frontRightDrive = new AutonomousMotor(frntRght, 2240, 4 );
+        backLeftDrive  = new AutonomousMotor(bckLft, 2240, 4 );
+        backRightDrive = new AutonomousMotor(bckRght, 2240, 4 );
+
+        //EXAMPLE AUTONOMOUS CODE
+
+        //Move Robot forward 48 inches at 80% speed
+        inchCountChange(48,48,48,48);
+        autonomousCommand(movement,inchCounts,0.8, 3);
+
+        //Move Robot backwards 48 inches at 50% speed
+        inchCountChange(-48,-48,-48,-48);
+        autonomousCommand(movement,inchCounts,0.5, 3);
+
+        //Turn Robot 90 Degrees at 100% speed
+        inchCountTurn(90);
+        autonomousCommand(movement,inchCounts,1, 3);
+
+        //Move 18 Inches at -18 Degrees at 70% speed
+        inchCountMove(-18,18);
+        autonomousCommand(movement,inchCounts,0.7, 3);
+
     }
 
 
@@ -65,8 +108,39 @@ public class AutonomousOpMode extends LinearOpMode {
                 currentMotor.motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             }
         }
+
     }
 
+    /**
+     * inchCountChange modifies the array "inchCounts"
+     */
+    public void inchCountChange(double topLeft, double topRight, double bottomLeft, double bottomRight){
+        inchCounts[0] = topLeft;
+        inchCounts[1] = topRight;
+        inchCounts[2] = bottomLeft;
+        inchCounts[3] = bottomRight;
+    }
+    /**
+     * inchCountTurn modifies the array "inchCounts" to have values to allow a turn of "degrees" degrees
+     */
+    public void inchCountTurn(double degrees){
+        double turningInches = robotTurningCircumference * (degrees/360);
+        double turningInches /=2;
+        inchCounts[0] = turningInches;
+        inchCounts[1] = -turningInches;
+        inchCounts[2] = turningInches;
+        inchCounts[3] = -turningInches;
+    }
+    /**
+     * inchCountMove modifies the array "inchCounts" to have values to allow a movement of "degrees" degrees
+     */
+    public void inchCountMove(double degrees, double inches){
+        double robotAngle = Math.toRadians(degrees) + Math.PI / 4;
+        inchCounts[0] = inches * Math.cos(robotAngle);
+        inchCounts[1] = inches * Math.sin(robotAngle);
+        inchCounts[2] = inches * Math.sin(robotAngle);
+        inchCounts[3] = inches * Math.cos(robotAngle);
+    }
 }
 
 

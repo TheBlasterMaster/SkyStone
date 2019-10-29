@@ -36,12 +36,15 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+import java.util.Arrays;
+
 
 @TeleOp(name="Iron Golem Controller", group="Mechanum Bot")
 public class ControllerOpMode extends OpMode
 {
     
     private ElapsedTime runtime = new ElapsedTime();
+
     private DcMotor frontLeftDrive = null;
     private DcMotor frontRightDrive = null;
     private DcMotor backLeftDrive = null;
@@ -102,7 +105,7 @@ public class ControllerOpMode extends OpMode
         *   RT and RB: Extend Arm
         */
 
-    
+
         //Trig Version (Needed for Autonomous and Feild Control)
         //-------------
         //double r = Math.hypot(gamepad1.left_stick_x, gamepad1.left_stick_y);
@@ -117,13 +120,19 @@ public class ControllerOpMode extends OpMode
         double speed = -gamepad1.left_stick_y;
         double turn = gamepad1.left_stick_x;
         double strafe = gamepad1.right_stick_x;
-
         v1 = speed + turn - strafe;
         v2 = speed - turn + strafe;
         v3 = speed + turn + strafe;
         v4 = speed - turn - strafe;
-
         
+        //Scale variables to value between 0-1
+        double[] scalingArray = {v1,v2,v3,v4};
+        Arrays.sort(scalingArray);
+        v1/= scalingArray[3];
+        v2/= scalingArray[3];
+        v3/= scalingArray[3];
+        v4/= scalingArray[3];
+
         frontLeftDrive.setPower(v1);
         frontRightDrive.setPower(v2);
         backLeftDrive.setPower(v3);
