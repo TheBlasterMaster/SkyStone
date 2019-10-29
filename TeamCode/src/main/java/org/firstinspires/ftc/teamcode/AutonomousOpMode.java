@@ -125,7 +125,7 @@ public class AutonomousOpMode extends LinearOpMode {
      */
     public void inchCountTurn(double degrees){
         double turningInches = robotTurningCircumference * (degrees/360);
-        double turningInches /=2;
+        turningInches /= 2;
         inchCounts[0] = turningInches;
         inchCounts[1] = -turningInches;
         inchCounts[2] = turningInches;
