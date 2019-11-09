@@ -3,7 +3,7 @@
 This repository is being used by Iron Golem for the 2019-2020 FTC season.
 
 ## DEFAULT README:
-##_
+________________
 
 ## NOTICE
 
