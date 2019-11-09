@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 
@@ -16,48 +17,56 @@ public class AutonomousOpMode extends LinearOpMode {
     private AutonomousMotor backLeftDrive = null;
     private AutonomousMotor backRightDrive = null;
 
-    private final double widthOfRobot = 0;
+    private final double widthOfRobot = 16;
     private final double robotTurningCircumference = widthOfRobot * 2 * Math.PI;
 
-    private final AutonomousMotor[] movement = {frontLeftDrive,frontRightDrive,backLeftDrive,backRightDrive};
-    private double[] inchCounts = new double[4];
+    private AutonomousMotor[] movement = new AutonomousMotor[4];
 
 
     @Override
     public void runOpMode() throws InterruptedException {
-        //INSERT AUTONOMOUS CODE HERE. INITIALIZE AUTONOMOUS MOTORS.
+
+        //Initializing Motors
         DcMotor frntLft = hardwareMap.get(DcMotor.class, "front_left");
         DcMotor frntRght = hardwareMap.get(DcMotor.class, "front_right");
         DcMotor bckLft = hardwareMap.get(DcMotor.class, "back_left");
         DcMotor bckRght = hardwareMap.get(DcMotor.class, "back_right");
 
-        frntLft.setDirection(DcMotor.Direction.REVERSE);
-        frntRght.setDirection(DcMotor.Direction.FORWARD);
+        frntLft.setDirection(DcMotor.Direction.FORWARD);
+        frntRght.setDirection(DcMotor.Direction.REVERSE);
         bckLft.setDirection(DcMotor.Direction.REVERSE);
         bckRght.setDirection(DcMotor.Direction.FORWARD);
 
-        frontLeftDrive  = new AutonomousMotor(frntLft, 2240, 4 );
-        frontRightDrive = new AutonomousMotor(frntRght, 2240, 4 );
-        backLeftDrive  = new AutonomousMotor(bckLft, 2240, 4 );
-        backRightDrive = new AutonomousMotor(bckRght, 2240, 4 );
+        frntLft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frntRght.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        bckLft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        bckRght.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        frontLeftDrive  = new AutonomousMotor(frntLft, 2240, 2.95276 );
+        frontRightDrive = new AutonomousMotor(frntRght, 2240, 2.95276 );
+        backLeftDrive  = new AutonomousMotor(bckLft, 2240, 2.95276 );
+        backRightDrive = new AutonomousMotor(bckRght, 2240, 2.95276 );
+
+        movement[0] = frontLeftDrive;
+        movement[1] = frontRightDrive;
+        movement[2] = backLeftDrive;
+        movement[3] = backRightDrive;
+
+
 
         //EXAMPLE AUTONOMOUS CODE
 
         //Move Robot forward 48 inches at 80% speed
-        inchCountChange(48,48,48,48);
-        autonomousCommand(movement,inchCounts,0.8, 3);
+        manualMove(48,48,48,48,0.8);
 
         //Move Robot backwards 48 inches at 50% speed
-        inchCountChange(-48,-48,-48,-48);
-        autonomousCommand(movement,inchCounts,0.5, 3);
+        manualMove(-48,-48,-48,-48,0.8);
 
         //Turn Robot 90 Degrees at 100% speed
-        inchCountTurn(90);
-        autonomousCommand(movement,inchCounts,1, 3);
+        turn(90,1);
 
         //Move 18 Inches at -18 Degrees at 70% speed
-        inchCountMove(-18,18);
-        autonomousCommand(movement,inchCounts,0.7, 3);
+        move(-18,18,0.7);
 
     }
 
@@ -67,39 +76,34 @@ public class AutonomousOpMode extends LinearOpMode {
      * @param args a list of all motors to turn
      * @param inches the inches that each motor will move the robot. This array corresponds to args.
      * @param speed a value between 0 and 1 that represents the speed the motors move at to reach their goal
-     * @param timeout a minimum time that an autonomousCommand must take up.
      */
-    public void autonomousCommand(AutonomousMotor[] args, double[] inches, double speed, double timeout) {
+    public void autonomousCommand(AutonomousMotor[] args, double[] inches, double speed) {
 
         if (opModeIsActive()) {
 
-            //Activate each Motor
+            //Calculate Speed and Encoder Target for each motor
+            double targets[] = new double[args.length];
+
             for (int i = 0; i<args.length; i++) {
                 AutonomousMotor currentMotor = args[i];
+
                 int newTarget = currentMotor.motor.getCurrentPosition() + (int) (inches[i] * currentMotor.COUNTS_PER_INCH);
+                targets[i] = newTarget;
+
                 currentMotor.motor.setTargetPosition(newTarget);
                 currentMotor.motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            }
+            divideByLargestInArray(targets,speed);
+
+            //Set The Speeds to each motor
+            for(AutonomousMotor currentMotor: args){
                 currentMotor.motor.setPower(speed);
             }
 
-            runtime.reset();
-
-            while (opModeIsActive() && (runtime.seconds() < timeout)) {
-                //Checks if Any Motors are still Running. If so, it ends the loop early.
-                boolean allMotorsFree = true;
-                for (AutonomousMotor currentMotor : args) {
-                    if (currentMotor.motor.isBusy()) {
-                        allMotorsFree = false;
-                        break;
-                    }
-                }
-                if (allMotorsFree) {
-                    break;
-                }
-
+            //Run Each Motor to the Target
+            while (opModeIsActive() && args[0].motor.isBusy()) {
                 telemetry.addData("Robot Status", "Motor1 Position %7d", args[1].motor.getCurrentPosition());
                 telemetry.update();
-
             }
 
             //Stop Each Motor
@@ -112,35 +116,63 @@ public class AutonomousOpMode extends LinearOpMode {
     }
 
     /**
-     * inchCountChange modifies the array "inchCounts"
+     * manualMove turns each individual wheel the given amount of inches.
+     * @param topLeft the amount of inches the top left wheel covers
+     * @param topRight the amount of inches the top left wheel covers
+     * @param bottomLeft the amount of inches the top left wheel covers
+     * @param bottomRight the amount of inches the top left wheel covers
+     * @param speed the speed of all four wheels (0-1)
      */
-    public void inchCountChange(double topLeft, double topRight, double bottomLeft, double bottomRight){
-        inchCounts[0] = topLeft;
-        inchCounts[1] = topRight;
-        inchCounts[2] = bottomLeft;
-        inchCounts[3] = bottomRight;
+    private void manualMove(double topLeft, double topRight, double bottomLeft, double bottomRight, double speed){
+        double inches[] = {topLeft,topRight,bottomLeft,bottomRight};
+        autonomousCommand(movement,inches,speed);
     }
+
     /**
-     * inchCountTurn modifies the array "inchCounts" to have values to allow a turn of "degrees" degrees
+     * turn rotates the robot around it's center.
+     * @param degrees the amount of rotation relavtive the current robots rotation
+     * @param speed the speed of turning (0-1)
      */
-    public void inchCountTurn(double degrees){
+    private void turn(double degrees,double speed){
         double turningInches = robotTurningCircumference * (degrees/360);
         turningInches /= 2;
-        inchCounts[0] = turningInches;
-        inchCounts[1] = -turningInches;
-        inchCounts[2] = turningInches;
-        inchCounts[3] = -turningInches;
+        double inches[] = {turningInches,-turningInches,turningInches,-turningInches};
+        autonomousCommand(movement,inches,speed);
     }
+
     /**
-     * inchCountMove modifies the array "inchCounts" to have values to allow a movement of "degrees" degrees
+     * move strafes the robot in a given amount of degrees
+     * @param degrees the direction of movement relative to the robot's current rotation
+     * @param inches the distance of movement
+     * @param speed the speed of movement (0-1)
      */
-    public void inchCountMove(double degrees, double inches){
+    private void move(double degrees, double inches, double speed){
         double robotAngle = Math.toRadians(degrees) + Math.PI / 4;
-        inchCounts[0] = inches * Math.cos(robotAngle);
-        inchCounts[1] = inches * Math.sin(robotAngle);
-        inchCounts[2] = inches * Math.sin(robotAngle);
-        inchCounts[3] = inches * Math.cos(robotAngle);
+        double inchArray[] = {inches * Math.cos(robotAngle),
+                              inches * Math.sin(robotAngle),
+                              inches * Math.sin(robotAngle),
+                              inches * Math.cos(robotAngle)};
+        autonomousCommand(movement,inchArray,speed);
+
     }
+
+    /**
+     * Helper method that converts an array into a 0-1 format
+     */
+    private double[] divideByLargestInArray(double[] array, double multiplier){
+        double largest = array[0];
+        for(double number: array)
+            if(number>largest)
+                largest = number;
+
+        for(int i = 0; i<array.length; i++)
+                array[i]= (array[i]/largest) * multiplier;
+
+        return array;
+
+    }
+
+
 }
 
 

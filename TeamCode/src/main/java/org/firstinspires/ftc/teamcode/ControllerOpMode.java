@@ -33,6 +33,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
@@ -50,6 +51,7 @@ public class ControllerOpMode extends OpMode
     private DcMotor backLeftDrive = null;
     private DcMotor backRightDrive = null;
 
+    private final double powerMultiplier = 0.8;
 
     @Override
     public void init() {
@@ -62,8 +64,8 @@ public class ControllerOpMode extends OpMode
         backRightDrive = hardwareMap.get(DcMotor.class, "back_right");
 
         
-        frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
-        frontLeftDrive.setDirection(DcMotor.Direction.FORWARD);
+        frontRightDrive.setDirection(DcMotor.Direction.FORWARD);
+        frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backRightDrive.setDirection(DcMotor.Direction.FORWARD);
 
@@ -88,35 +90,33 @@ public class ControllerOpMode extends OpMode
         double v2;
         double v3;
         double v4;
-        /*
+        /***---------------------------
         *         ______
         *     v1 0|    |0 v2
         *         |    |
         *     v3 0|    |0 v4
         *         ``````
-        */
-
-        /*
         *Control Scheme:
         *   Left Stick: Movement
         *   Right Stick: Turning
         *   LT and LB: Move Arm Up and Down
         *   A: Grab and Release block
         *   RT and RB: Extend Arm
-        */
+         ---------------------------**/
 
 
-        //Trig Version (Needed for Autonomous and Feild Control)
+        //Trig Version (Needed for Autonomous and Field Control)
         //-------------
-        //double r = Math.hypot(gamepad1.left_stick_x, gamepad1.left_stick_y);
-        //double robotAngle = Math.atan2(gamepad1.left_stick_x, -gamepad1.left_stick_y) + Math.PI / 4;
-        //double rightX = gamepad1.right_stick_x;
-        //v1 = r * Math.cos(robotAngle) + rightX;
-        //v2 = r * Math.sin(robotAngle) - rightX;
-        //v3 = r * Math.sin(robotAngle) + rightX;
-        //v4 = r * Math.cos(robotAngle) - rightX;
+        double r = Math.hypot(gamepad1.left_stick_x, gamepad1.left_stick_y);
+        double robotAngle = Math.atan2(-gamepad1.left_stick_x, -gamepad1.left_stick_y) + Math.PI / 4;
+        double rightX = gamepad1.right_stick_x;
+        v1 = r * Math.cos(robotAngle) + rightX;
+        v2 = r * Math.sin(robotAngle) - rightX;
+        v3 = r * Math.sin(robotAngle) + rightX;
+        v4 = r * Math.cos(robotAngle) - rightX;
 
-        //Scaling Version
+        /*
+        Scaling Version
         double speed = -gamepad1.left_stick_y;
         double turn = gamepad1.left_stick_x;
         double strafe = gamepad1.right_stick_x;
@@ -128,15 +128,17 @@ public class ControllerOpMode extends OpMode
         //Scale variables to value between 0-1
         double[] scalingArray = {v1,v2,v3,v4};
         Arrays.sort(scalingArray);
+
         v1/= scalingArray[3];
         v2/= scalingArray[3];
         v3/= scalingArray[3];
         v4/= scalingArray[3];
 
-        frontLeftDrive.setPower(v1);
-        frontRightDrive.setPower(v2);
-        backLeftDrive.setPower(v3);
-        backRightDrive.setPower(v4);
+        frontLeftDrive.setPower(v1 * powerMultiplier);
+        frontRightDrive.setPower(v2 * powerMultiplier);
+        backLeftDrive.setPower(v3 * powerMultiplier);
+        backRightDrive.setPower(v4 * powerMultiplier);
+        */
 
         telemetry.addData("Status", "Run Time: " + runtime.toString());
     }
