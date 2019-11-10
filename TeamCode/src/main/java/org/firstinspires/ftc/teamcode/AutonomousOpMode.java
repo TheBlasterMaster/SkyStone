@@ -19,7 +19,7 @@ public class AutonomousOpMode extends LinearOpMode {
     private AutonomousMotor backRightDrive = null;
 
     private final double widthOfRobot = 16;
-    private final double robotTurningCircumference = widthOfRobot * 2 * Math.PI;
+    private final double robotTurningCircumference = widthOfRobot * Math.PI;
 
     private AutonomousMotor[] movement = new AutonomousMotor[4];
 
