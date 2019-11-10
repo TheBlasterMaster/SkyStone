@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.robot.Robot;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -34,8 +35,8 @@ public class AutonomousOpMode extends LinearOpMode {
 
         frntLft.setDirection(DcMotor.Direction.FORWARD);
         frntRght.setDirection(DcMotor.Direction.REVERSE);
-        bckLft.setDirection(DcMotor.Direction.REVERSE);
-        bckRght.setDirection(DcMotor.Direction.FORWARD);
+        bckLft.setDirection(DcMotor.Direction.FORWARD);
+        bckRght.setDirection(DcMotor.Direction.REVERSE);
 
         frntLft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         frntRght.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -56,17 +57,14 @@ public class AutonomousOpMode extends LinearOpMode {
 
         //EXAMPLE AUTONOMOUS CODE
 
-        //Move Robot forward 48 inches at 80% speed
-        manualMove(48,48,48,48,0.8);
+        //Move Robot forward 8 inches at 50% speed
+        manualMove(8,8,8,8,0.5);
 
-        //Move Robot backwards 48 inches at 50% speed
-        manualMove(-48,-48,-48,-48,0.8);
+        //Turn Robot 90 Degrees at 50% speed
+        turn(90,0.5);
 
-        //Turn Robot 90 Degrees at 100% speed
-        turn(90,1);
-
-        //Move 18 Inches at -18 Degrees at 70% speed
-        move(-18,18,0.7);
+        //Move 8 Inches at -18 Degrees at 50% speed
+        move(-18,8,0.5);
 
     }
 
@@ -79,39 +77,39 @@ public class AutonomousOpMode extends LinearOpMode {
      */
     public void autonomousCommand(AutonomousMotor[] args, double[] inches, double speed) {
 
-        if (opModeIsActive()) {
+        //if (opModeIsActive()) {
 
-            //Calculate Speed and Encoder Target for each motor
-            double targets[] = new double[args.length];
+        //Calculate Speed and Encoder Target for each motor
+        double targets[] = new double[args.length];
 
-            for (int i = 0; i<args.length; i++) {
-                AutonomousMotor currentMotor = args[i];
+        for (int i = 0; i<args.length; i++) {
+            AutonomousMotor currentMotor = args[i];
 
-                int newTarget = currentMotor.motor.getCurrentPosition() + (int) (inches[i] * currentMotor.COUNTS_PER_INCH);
-                targets[i] = newTarget;
-
-                currentMotor.motor.setTargetPosition(newTarget);
-                currentMotor.motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            }
-            divideByLargestInArray(targets,speed);
-
-            //Set The Speeds to each motor
-            for(AutonomousMotor currentMotor: args){
-                currentMotor.motor.setPower(speed);
-            }
-
-            //Run Each Motor to the Target
-            while (opModeIsActive() && args[0].motor.isBusy()) {
-                telemetry.addData("Robot Status", "Motor1 Position %7d", args[1].motor.getCurrentPosition());
-                telemetry.update();
-            }
-
-            //Stop Each Motor
-            for (AutonomousMotor currentMotor : args) {
-                currentMotor.motor.setPower(0);
-                currentMotor.motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            }
+            int newTarget = currentMotor.motor.getCurrentPosition() + (int) (inches[i] * currentMotor.COUNTS_PER_INCH);
+            targets[i] = (int) (inches[i] * currentMotor.COUNTS_PER_INCH);
+            currentMotor.motor.setTargetPosition(newTarget);
+            currentMotor.motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         }
+
+        targets = divideByLargestInArray(targets,speed);
+        //Set The Speeds to each motor
+        for (int i = 0; i<args.length; i++) {
+            AutonomousMotor currentMotor = args[i];
+            currentMotor.motor.setPower(targets[i]);
+        }
+
+        //Run Each Motor to the Target
+        //whileOpModeIsActive
+        while (args[0].motor.isBusy()) {
+
+        }
+
+        //Stop Each Motor
+        for (AutonomousMotor currentMotor : args) {
+            currentMotor.motor.setPower(0);
+            currentMotor.motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        }
+        //}
 
     }
 
@@ -147,11 +145,11 @@ public class AutonomousOpMode extends LinearOpMode {
      * @param speed the speed of movement (0-1)
      */
     private void move(double degrees, double inches, double speed){
-        double robotAngle = Math.toRadians(degrees) + Math.PI / 4;
+        double robotAngle = Math.toRadians(-degrees) + Math.PI / 4;
         double inchArray[] = {inches * Math.cos(robotAngle),
-                              inches * Math.sin(robotAngle),
-                              inches * Math.sin(robotAngle),
-                              inches * Math.cos(robotAngle)};
+                inches * Math.sin(robotAngle),
+                inches * Math.sin(robotAngle),
+                inches * Math.cos(robotAngle)};
         autonomousCommand(movement,inchArray,speed);
 
     }
@@ -166,7 +164,7 @@ public class AutonomousOpMode extends LinearOpMode {
                 largest = number;
 
         for(int i = 0; i<array.length; i++)
-                array[i]= (array[i]/largest) * multiplier;
+            array[i]= (array[i]/largest) * multiplier;
 
         return array;
 
