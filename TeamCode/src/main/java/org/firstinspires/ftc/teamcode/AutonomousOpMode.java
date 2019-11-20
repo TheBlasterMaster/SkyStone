@@ -20,6 +20,7 @@ public class AutonomousOpMode extends LinearOpMode {
 
     private final double widthOfRobot = 16;
     private final double robotTurningCircumference = widthOfRobot * Math.PI;
+    private final double gearAndFrictionConstant = 8.0/27;
 
     private AutonomousMotor[] movement = new AutonomousMotor[4];
 
@@ -69,6 +70,49 @@ public class AutonomousOpMode extends LinearOpMode {
     }
 
 
+    /**
+     * autonomousMovementCommand moves all provided motors and servos while taking into mind our gear Ratios.
+     * @param args a list of all motors to turn
+     * @param inches the inches that each motor will move the robot. This array corresponds to args.
+     * @param speed a value between 0 and 1 that represents the speed the motors move at to reach their goal
+     */
+    public void autonomousMovementCommand(AutonomousMotor[] args, double[] inches, double speed) {
+
+        //if (opModeIsActive()) {
+
+        //Calculate Speed and Encoder Target for each motor
+        double targets[] = new double[args.length];
+
+        for (int i = 0; i<args.length; i++) {
+            AutonomousMotor currentMotor = args[i];
+
+            int newTarget = currentMotor.motor.getCurrentPosition() + (int) (inches[i] * gearAndFrictionConstant* currentMotor.COUNTS_PER_INCH);
+            targets[i] = (int) (inches[i] * currentMotor.COUNTS_PER_INCH);
+            currentMotor.motor.setTargetPosition(newTarget);
+            currentMotor.motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        }
+
+        targets = divideByLargestInArray(targets,speed);
+        //Set The Speeds to each motor
+        for (int i = 0; i<args.length; i++) {
+            AutonomousMotor currentMotor = args[i];
+            currentMotor.motor.setPower(targets[i]);
+        }
+
+        //Run Each Motor to the Target
+        //whileOpModeIsActive
+        while (args[0].motor.isBusy()) {
+
+        }
+
+        //Stop Each Motor
+        for (AutonomousMotor currentMotor : args) {
+            currentMotor.motor.setPower(0);
+            currentMotor.motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        }
+        //}
+
+    }
     /**
      * autonomousCommand moves all provided motors and servos.
      * @param args a list of all motors to turn
@@ -123,7 +167,7 @@ public class AutonomousOpMode extends LinearOpMode {
      */
     private void manualMove(double topLeft, double topRight, double bottomLeft, double bottomRight, double speed){
         double inches[] = {topLeft,topRight,bottomLeft,bottomRight};
-        autonomousCommand(movement,inches,speed);
+        autonomousMovementCommand(movement,inches,speed);
     }
 
     /**
@@ -150,7 +194,7 @@ public class AutonomousOpMode extends LinearOpMode {
                 inches * Math.sin(robotAngle),
                 inches * Math.sin(robotAngle),
                 inches * Math.cos(robotAngle)};
-        autonomousCommand(movement,inchArray,speed);
+        autonomousMovementCommand(movement,inchArray,speed);
 
     }
 

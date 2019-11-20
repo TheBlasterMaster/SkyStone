@@ -27,13 +27,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.firstinspires.ftc.robotcontroller.external.samples;
+package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
@@ -43,33 +44,64 @@ import java.util.Arrays;
 @TeleOp(name="Iron Golem Controller", group="Mechanum Bot")
 public class ControllerOpMode extends OpMode
 {
-    
+
     private ElapsedTime runtime = new ElapsedTime();
 
     private DcMotor frontLeftDrive = null;
     private DcMotor frontRightDrive = null;
     private DcMotor backLeftDrive = null;
     private DcMotor backRightDrive = null;
+    private DcMotor horizontalPulley = null;
+    private DcMotor verticalPulley = null;
 
+    private Servo gripper = null;
+
+    private int horizontalMin;
+    private int verticalMin;
+    private int gripperCoolDown = 0;
+
+    //CONTROLLABLE VARIABLES
     private final double powerMultiplier = 0.8;
+    private final double openGripperPosition = 0.8;
+    private final double closedGripperPosition = 0.5;
+
+
+    private final int horizontalBlockRotations = 2204;
+    private final int verticalBlockRotations = 2204;
+
+    private final double linearSlideControlPoint = 0.2;
+    private final int gripperControlPoint = 60;
 
     @Override
     public void init() {
         telemetry.addData("Status", "Initialized");
 
-        
+
         frontLeftDrive  = hardwareMap.get(DcMotor.class, "front_left");
         frontRightDrive = hardwareMap.get(DcMotor.class, "front_right");
         backLeftDrive  = hardwareMap.get(DcMotor.class, "back_left");
         backRightDrive = hardwareMap.get(DcMotor.class, "back_right");
+        horizontalPulley = hardwareMap.get(DcMotor.class, "horiz");
+        verticalPulley = hardwareMap.get(DcMotor.class, "vert");
 
-        
+
         frontRightDrive.setDirection(DcMotor.Direction.FORWARD);
         frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backRightDrive.setDirection(DcMotor.Direction.FORWARD);
+        horizontalPulley.setDirection(DcMotor.Direction.REVERSE);
+        verticalPulley.setDirection(DcMotor.Direction.REVERSE);
 
-        
+        horizontalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        verticalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        horizontalMin = horizontalPulley.getCurrentPosition();
+        horizontalPulley.setTargetPosition(horizontalPulley.getCurrentPosition());
+        verticalMin = verticalPulley.getCurrentPosition();
+        verticalPulley.setTargetPosition(horizontalPulley.getCurrentPosition());
+
+
+
         telemetry.addData("Status", "Initialized");
     }
 
@@ -85,27 +117,27 @@ public class ControllerOpMode extends OpMode
 
     @Override
     public void loop() {
-        
+
         double v1;
         double v2;
         double v3;
         double v4;
         /***---------------------------
-        *         ______
-        *     v1 0|    |0 v2
-        *         |    |
-        *     v3 0|    |0 v4
-        *         ``````
-        *Control Scheme:
-        *   Left Stick: Movement
-        *   Right Stick: Turning
-        *   LT and LB: Move Arm Up and Down
-        *   A: Grab and Release block
-        *   RT and RB: Extend Arm
+         *         ______
+         *     v1 0|    |0 v2
+         *         |    |
+         *     v3 0|    |0 v4
+         *         ``````
+         *Control Scheme:
+         *   Left Stick: Movement
+         *   Right Stick: Turning
+         *   LT and LB: Move Arm Up and Down
+         *   A: Grab and Release block
+         *   RT and RB: Extend Arm
          ---------------------------**/
 
 
-        //Trig Version (Needed for Autonomous and Field Control)
+        //Movement
         //-------------
         double r = Math.hypot(gamepad1.left_stick_x, gamepad1.left_stick_y);
         double robotAngle = Math.atan2(gamepad1.left_stick_x, -gamepad1.left_stick_y) + Math.PI / 4;
@@ -124,7 +156,7 @@ public class ControllerOpMode extends OpMode
         v2 = speed - turn + strafe;
         v3 = speed + turn + strafe;
         v4 = speed - turn - strafe;
-        
+
         //Scale variables to value between 0-1
         double[] scalingArray = {v1,v2,v3,v4};
         Arrays.sort(scalingArray);
@@ -133,14 +165,67 @@ public class ControllerOpMode extends OpMode
         v2/= scalingArray[3];
         v3/= scalingArray[3];
         v4/= scalingArray[3];
-
-        frontLeftDrive.setPower(v1 * powerMultiplier);
-        frontRightDrive.setPower(v2 * powerMultiplier);
-        backLeftDrive.setPower(v3 * powerMultiplier);
-        backRightDrive.setPower(v4 * powerMultiplier);
         */
 
-        telemetry.addData("Status", "Run Time: " + runtime.toString());
+        //Controlling Linear Slides
+        //-------------------------
+        // - Horizontal Slide
+        if (gamepad1.right_trigger > 0.2 &&
+                (horizontalPulley.getCurrentPosition() - horizontalMin) % horizontalBlockRotations > horizontalBlockRotations * linearSlideControlPoint) {
+            int target = (horizontalPulley.getTargetPosition() - horizontalMin) % horizontalBlockRotations + 1;
+            if (target != 4) {
+                horizontalPulley.setTargetPosition(horizontalMin + (target) * horizontalBlockRotations);
+            }
+        }
+
+        if (gamepad1.right_bumper &&
+                (horizontalPulley.getCurrentPosition() - horizontalMin) % horizontalBlockRotations < horizontalBlockRotations * (1 - linearSlideControlPoint)) {
+            int target = (horizontalPulley.getTargetPosition() - horizontalMin) % horizontalBlockRotations - 1;
+            if (target != -1) {
+                horizontalPulley.setTargetPosition(horizontalMin + (target) * horizontalBlockRotations);
+            }
+        }
+        // - Verical Slide
+        if (gamepad1.left_trigger > 0.2 &&
+                (verticalPulley.getCurrentPosition() - verticalMin) % verticalBlockRotations > verticalBlockRotations * linearSlideControlPoint) {
+            int target = (verticalPulley.getTargetPosition() - verticalMin) % verticalBlockRotations + 1;
+            if (target != 4) {
+                verticalPulley.setTargetPosition(verticalMin + (target) * verticalBlockRotations);
+            }
+        }
+
+        if (gamepad1.left_bumper &&
+                (verticalPulley.getCurrentPosition() - verticalMin) % verticalBlockRotations < verticalBlockRotations * (1 - linearSlideControlPoint)) {
+            int target = (verticalPulley.getTargetPosition() - verticalMin) % verticalBlockRotations - 1;
+            if (target != -1) {
+                verticalPulley.setTargetPosition(verticalMin + (target) * verticalBlockRotations);
+            }
+        }
+
+        //Activate Gripper
+        if (gamepad1.a && gripperCoolDown == 0) {
+            if (gripper.getPosition() == closedGripperPosition)
+                gripper.setPosition(openGripperPosition);
+            else
+                gripper.setPosition(closedGripperPosition);
+
+        }
+
+
+        if (gripperCoolDown != 0) {
+            gripperCoolDown += 1;
+            if (gripperCoolDown == gripperControlPoint) {
+                gripperCoolDown = 0;
+            }
+
+
+            frontLeftDrive.setPower(v1 * powerMultiplier);
+            frontRightDrive.setPower(v2 * powerMultiplier);
+            backLeftDrive.setPower(v3 * powerMultiplier);
+            backRightDrive.setPower(v4 * powerMultiplier);
+
+            telemetry.addData("Status", "Run Time: " + runtime.toString());
+        }
     }
 
     @Override
