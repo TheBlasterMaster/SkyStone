@@ -59,18 +59,26 @@ public class ControllerOpMode extends OpMode
     private int horizontalMin;
     private int verticalMin;
     private int gripperCoolDown = 0;
+    private int verticalCoolDown = 0;
+    private int horizontalCoolDown = 0;
+
+
+
+    private int verticalTarget = 0;
+    private int horizontalTarget = 0;
 
     //CONTROLLABLE VARIABLES
-    private final double powerMultiplier = 0.8;
-    private final double openGripperPosition = 0.8;
-    private final double closedGripperPosition = 0.5;
+    private final double powerMultiplier = 1; // Total Speed of Robot
+    private final double openGripperPosition = 0.8; // Percentage of servo turn when open
+    private final double closedGripperPosition = 0.2; // percentage of servo turn when closed
+    private final double turnSensitvity = 0.5; // Turn sensitivity
 
+    private final int horizontalBlockRotations = 250; // amount of horizontal slide movement per button tap
+    private final int verticalBlockRotations = 250;// vertical slide movement per button tap
 
-    private final int horizontalBlockRotations = 2204;
-    private final int verticalBlockRotations = 2204;
-
-    private final double linearSlideControlPoint = 0.2;
-    private final int gripperControlPoint = 60;
+    private final int gripperControlPoint = 120; // amount of time before you can grip again
+    private final int horizontalControlPoint = 120; // amount of time before slide can move again
+    private final int verticalControlPoint = 120; // amount of time before slide can move again
 
     @Override
     public void init() {
@@ -83,6 +91,7 @@ public class ControllerOpMode extends OpMode
         backRightDrive = hardwareMap.get(DcMotor.class, "back_right");
         horizontalPulley = hardwareMap.get(DcMotor.class, "horiz");
         verticalPulley = hardwareMap.get(DcMotor.class, "vert");
+        gripper = hardwareMap.get(Servo.class, "gripper");
 
 
         frontRightDrive.setDirection(DcMotor.Direction.FORWARD);
@@ -90,15 +99,16 @@ public class ControllerOpMode extends OpMode
         backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backRightDrive.setDirection(DcMotor.Direction.FORWARD);
         horizontalPulley.setDirection(DcMotor.Direction.REVERSE);
-        verticalPulley.setDirection(DcMotor.Direction.REVERSE);
+        verticalPulley.setDirection(DcMotor.Direction.FORWARD);
 
-        horizontalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        verticalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
 
         horizontalMin = horizontalPulley.getCurrentPosition();
-        horizontalPulley.setTargetPosition(horizontalPulley.getCurrentPosition());
         verticalMin = verticalPulley.getCurrentPosition();
-        verticalPulley.setTargetPosition(horizontalPulley.getCurrentPosition());
+
+
+
+
 
 
 
@@ -122,7 +132,7 @@ public class ControllerOpMode extends OpMode
         double v2;
         double v3;
         double v4;
-        /***---------------------------
+        /*---------------------------
          *         ______
          *     v1 0|    |0 v2
          *         |    |
@@ -134,14 +144,14 @@ public class ControllerOpMode extends OpMode
          *   LT and LB: Move Arm Up and Down
          *   A: Grab and Release block
          *   RT and RB: Extend Arm
-         ---------------------------**/
+         ---------------------------*/
 
 
         //Movement
         //-------------
         double r = Math.hypot(gamepad1.left_stick_x, gamepad1.left_stick_y);
-        double robotAngle = Math.atan2(gamepad1.left_stick_x, -gamepad1.left_stick_y) + Math.PI / 4;
-        double rightX = gamepad1.right_stick_x;
+        double robotAngle = Math.atan2(gamepad1.left_stick_x, gamepad1.left_stick_y) + Math.PI / 4;
+        double rightX = gamepad1.right_stick_x * turnSensitvity;
         v1 = r * Math.cos(robotAngle) + rightX;
         v2 = r * Math.sin(robotAngle) - rightX;
         v3 = r * Math.sin(robotAngle) + rightX;
@@ -169,41 +179,65 @@ public class ControllerOpMode extends OpMode
 
         //Controlling Linear Slides
         //-------------------------
-        // - Horizontal Slide
-        if (gamepad1.right_trigger > 0.2 &&
-                (horizontalPulley.getCurrentPosition() - horizontalMin) % horizontalBlockRotations > horizontalBlockRotations * linearSlideControlPoint) {
-            int target = (horizontalPulley.getTargetPosition() - horizontalMin) % horizontalBlockRotations + 1;
-            if (target != 4) {
-                horizontalPulley.setTargetPosition(horizontalMin + (target) * horizontalBlockRotations);
-            }
+        if (horizontalCoolDown != 0) {
+            horizontalCoolDown += 1;
+            if (horizontalCoolDown == horizontalControlPoint)
+                horizontalCoolDown = 0;
         }
 
-        if (gamepad1.right_bumper &&
-                (horizontalPulley.getCurrentPosition() - horizontalMin) % horizontalBlockRotations < horizontalBlockRotations * (1 - linearSlideControlPoint)) {
-            int target = (horizontalPulley.getTargetPosition() - horizontalMin) % horizontalBlockRotations - 1;
-            if (target != -1) {
-                horizontalPulley.setTargetPosition(horizontalMin + (target) * horizontalBlockRotations);
-            }
+        if (verticalCoolDown != 0) {
+            verticalCoolDown += 1;
+            if (verticalCoolDown == verticalControlPoint)
+                verticalCoolDown = 0;
+        }
+
+        // - Horizontal Slide
+        if (gamepad1.right_trigger > 0.2 && horizontalTarget!=2 && horizontalCoolDown == 0){
+            horizontalTarget+=1;
+            horizontalCoolDown+=1;
+            horizontalPulley.setTargetPosition(horizontalTarget * horizontalBlockRotations + horizontalMin);
+            horizontalPulley.setPower(1);
+            horizontalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        }
+
+        if (gamepad1.right_bumper && horizontalTarget !=0 && horizontalCoolDown == 0){
+            horizontalTarget-=1;
+            horizontalCoolDown+=1;
+            horizontalPulley.setTargetPosition(horizontalTarget * horizontalBlockRotations + horizontalMin);
+            horizontalPulley.setPower(1);
+            horizontalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
         }
         // - Verical Slide
-        if (gamepad1.left_trigger > 0.2 &&
-                (verticalPulley.getCurrentPosition() - verticalMin) % verticalBlockRotations > verticalBlockRotations * linearSlideControlPoint) {
-            int target = (verticalPulley.getTargetPosition() - verticalMin) % verticalBlockRotations + 1;
-            if (target != 4) {
-                verticalPulley.setTargetPosition(verticalMin + (target) * verticalBlockRotations);
-            }
+        if (gamepad1.left_trigger > 0.2 && verticalTarget !=3 && verticalCoolDown == 0){
+            verticalTarget +=1;
+            verticalCoolDown+=1;
+            verticalPulley.setTargetPosition(verticalTarget * verticalBlockRotations + verticalMin);
+            verticalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            verticalPulley.setPower(1);
         }
 
-        if (gamepad1.left_bumper &&
-                (verticalPulley.getCurrentPosition() - verticalMin) % verticalBlockRotations < verticalBlockRotations * (1 - linearSlideControlPoint)) {
-            int target = (verticalPulley.getTargetPosition() - verticalMin) % verticalBlockRotations - 1;
-            if (target != -1) {
-                verticalPulley.setTargetPosition(verticalMin + (target) * verticalBlockRotations);
-            }
+        if (gamepad1.left_bumper && verticalTarget != 0 && verticalCoolDown == 0)
+        {
+            verticalTarget -= 1;
+            verticalCoolDown+=1;
+            verticalPulley.setTargetPosition(verticalTarget * verticalBlockRotations + verticalMin);
+            verticalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            verticalPulley.setPower(1);
         }
+
+        if (gripperCoolDown != 0) {
+            gripperCoolDown += 1;
+            if (gripperCoolDown == gripperControlPoint)
+                gripperCoolDown = 0;
+        }
+
+
 
         //Activate Gripper
         if (gamepad1.a && gripperCoolDown == 0) {
+            gripperCoolDown+=1;
             if (gripper.getPosition() == closedGripperPosition)
                 gripper.setPosition(openGripperPosition);
             else
@@ -212,24 +246,33 @@ public class ControllerOpMode extends OpMode
         }
 
 
-        if (gripperCoolDown != 0) {
-            gripperCoolDown += 1;
-            if (gripperCoolDown == gripperControlPoint) {
-                gripperCoolDown = 0;
-            }
 
 
-            frontLeftDrive.setPower(v1 * powerMultiplier);
-            frontRightDrive.setPower(v2 * powerMultiplier);
-            backLeftDrive.setPower(v3 * powerMultiplier);
-            backRightDrive.setPower(v4 * powerMultiplier);
 
-            telemetry.addData("Status", "Run Time: " + runtime.toString());
-        }
+        frontLeftDrive.setPower(v1 * powerMultiplier);
+        frontRightDrive.setPower(v2 * powerMultiplier);
+        backLeftDrive.setPower(v3 * powerMultiplier);
+        backRightDrive.setPower(v4 * powerMultiplier);
+
+        telemetry.addData("Status", "Run Time: " + horizontalTarget);
+        telemetry.addData("Miles is sla e", "Run Time: " + gripperCoolDown);
+
+
     }
+
 
     @Override
     public void stop() {
+        horizontalPulley.setTargetPosition(horizontalMin);
+        horizontalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        horizontalPulley.setPower(1);
+        verticalPulley.setTargetPosition(verticalMin);
+        verticalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        verticalPulley.setPower(1);
+
+        while(horizontalPulley.isBusy() || verticalPulley.isBusy()){}
+
+
     }
 
 }
