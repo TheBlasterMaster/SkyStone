@@ -5,6 +5,9 @@ import com.qualcomm.robotcore.robot.Robot;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+//NEW
+import com.qualcomm.robotcore.hardware.Servo;
+____
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -17,14 +20,17 @@ public class AutonomousOpMode extends LinearOpMode {
     private AutonomousMotor frontRightDrive = null;
     private AutonomousMotor backLeftDrive = null;
     private AutonomousMotor backRightDrive = null;
-
+    //NEW
+    private Servo foundationGripper1 = null;
+    private Servo foundationGripper2 = null;
+    //----
     private final double widthOfRobot = 16;
     private final double robotTurningCircumference = widthOfRobot * Math.PI;
     private final double gearAndFrictionConstant = 8.0/27;
 
     private AutonomousMotor[] movement = new AutonomousMotor[4];
 
-
+    //------
     @Override
     public void runOpMode() throws InterruptedException {
 
@@ -33,6 +39,10 @@ public class AutonomousOpMode extends LinearOpMode {
         DcMotor frntRght = hardwareMap.get(DcMotor.class, "front_right");
         DcMotor bckLft = hardwareMap.get(DcMotor.class, "back_left");
         DcMotor bckRght = hardwareMap.get(DcMotor.class, "back_right");
+        //NEW
+        Servo foundationGripper1 = hardwareMap.get(Servo.class, "gripper1");
+        Servo foundationGripper2 = hardwareMap.get(Servo.class, "gripper1");
+
 
         frntLft.setDirection(DcMotor.Direction.FORWARD);
         frntRght.setDirection(DcMotor.Direction.REVERSE);
@@ -67,6 +77,9 @@ public class AutonomousOpMode extends LinearOpMode {
         //Move 8 Inches at -18 Degrees at 50% speed
         move(-18,8,0.5);
 
+        //NEW (ACTIVATE FOUNDATION GRIPPER)
+        foundationGripper1.setPosition(0.2);
+        foundationGripper2.setPosition(0.2);
     }
 
 
