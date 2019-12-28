@@ -51,34 +51,28 @@ public class ControllerOpMode extends OpMode
     private DcMotor frontRightDrive = null;
     private DcMotor backLeftDrive = null;
     private DcMotor backRightDrive = null;
-    private DcMotor horizontalPulley = null;
-    private DcMotor verticalPulley = null;
+    private DcMotor horizontalSlideMotor = null;
+    private DcMotor verticalSlideMotor = null;
 
     private Servo gripper = null;
-
-    private int horizontalMin;
-    private int verticalMin;
-    private int gripperCoolDown = 0;
-    private int verticalCoolDown = 0;
-    private int horizontalCoolDown = 0;
+    private boolean gripperButtonHeld = false;
+    private boolean returningSlides = false;
 
 
 
-    private int verticalTarget = 0;
-    private int horizontalTarget = 0;
-
-    //CONTROLLABLE VARIABLES
-    private final double powerMultiplier = 1; // Total Speed of Robot
     private final double openGripperPosition = 0.4; // Percentage of servo turn when open
-    private final double closedGripperPosition = 0; // percentage of servo turn when closed
-    private final double turnSensitvity = 0.5; // Turn sensitivity
+    private final double closedGripperPosition = 0; // Percentage of servo turn when closed
 
-    private final int horizontalBlockRotations = 31; // amount of horizontal slide movement per button tap
-    private final int verticalBlockRotations = 250;// vertical slide movement per button tap
+    private final double turnSensitvity = 0.5; // Multiplier to Turn Speed
 
-    private final int gripperControlPoint = 120; // amount of time before you can grip again
-    private final int horizontalControlPoint = 120; // amount of time before slide can move again
-    private final int verticalControlPoint = 120; // amount of time before slide can move again
+    private final double powerMultiplier = 1; // Multiplier to the Movement Speed of Robot
+    private final double buildModeSensitivity = 0.25; //Multipler to Movement while holding "B"
+
+    private final double slideSpeed = 0.6; // Multiplier to the Speed of Retracting and Extending the Slides
+
+    private final int maxHorizontalPosition = 0; //The farthest the arm can extend forward.
+    private final int maxVerticalPosition = 0; //The furthest the arm can extend upward.
+
 
     @Override
     public void init() {
@@ -89,35 +83,23 @@ public class ControllerOpMode extends OpMode
         frontRightDrive = hardwareMap.get(DcMotor.class, "front_right");
         backLeftDrive  = hardwareMap.get(DcMotor.class, "back_left");
         backRightDrive = hardwareMap.get(DcMotor.class, "back_right");
-        horizontalPulley = hardwareMap.get(DcMotor.class, "horiz");
-        verticalPulley = hardwareMap.get(DcMotor.class, "vert");
+        horizontalSlideMotor = hardwareMap.get(DcMotor.class, "horiz");
+        verticalSlideMotor = hardwareMap.get(DcMotor.class, "vert");
         gripper = hardwareMap.get(Servo.class, "gripper");
 
-        horizontalPulley.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        verticalPulley.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        horizontalPulley.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        verticalPulley.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        horizontalSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        verticalSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        verticalSlideMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
 
         frontRightDrive.setDirection(DcMotor.Direction.FORWARD);
         frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backRightDrive.setDirection(DcMotor.Direction.FORWARD);
-        horizontalPulley.setDirection(DcMotor.Direction.REVERSE);
-        verticalPulley.setDirection(DcMotor.Direction.FORWARD);
+        horizontalSlideMotor.setDirection(DcMotor.Direction.REVERSE);
+        verticalSlideMotor.setDirection(DcMotor.Direction.FORWARD);
 
-
-
-        horizontalMin = horizontalPulley.getCurrentPosition();
-        verticalMin = verticalPulley.getCurrentPosition();
-
-
-
-
-
-
-
-        telemetry.addData("Status", "Initialized");
     }
 
 
@@ -132,11 +114,6 @@ public class ControllerOpMode extends OpMode
 
     @Override
     public void loop() {
-
-        double v1;
-        double v2;
-        double v3;
-        double v4;
         /***---------------------------
          *         ______
          *     v1 0|    |0 v2
@@ -146,156 +123,72 @@ public class ControllerOpMode extends OpMode
          *Control Scheme:
          *   Left Stick: Movement
          *   Right Stick: Turning
-         *   LT and LB: Move Arm Up and Down
+         *   RT and RB: Move Arm Up and Down
          *   A: Grab and Release block
-         *   RT and RB: Extend Arm
+         *   LT and LB: Extend Arm
+         *   B: Build Mode, Slows Down Movement
+         *   X: Return Slides to 0 and Open Gripper
          ---------------------------**/
 
 
-        //Movement
-        //-------------
-        double r = Math.hypot(gamepad1.left_stick_x, gamepad1.left_stick_y);
-        double robotAngle = Math.atan2(gamepad1.left_stick_x, gamepad1.left_stick_y) + Math.PI / 4;
-        double rightX = gamepad1.right_stick_x * turnSensitvity;
-        v1 = r * Math.cos(robotAngle) + rightX;
-        v2 = r * Math.sin(robotAngle) - rightX;
-        v3 = r * Math.sin(robotAngle) + rightX;
-        v4 = r * Math.cos(robotAngle) - rightX;
+        // Movement
+        //------------
+        if(gamepad1.b) //Slow Down Movement Speed if B is held Down
+            moveRobot(gamepad1.left_stick_x * buildModeSensitivity, gamepad1.left_stick_y * buildModeSensitivity,gamepad1.right_stick_x * turnSensitvity);
+        else
+            moveRobot(gamepad1.left_stick_x, gamepad1.left_stick_y,gamepad1.right_stick_x * turnSensitvity);
 
-        /*
-        Scaling Version
-        double speed = -gamepad1.left_stick_y;
-        double turn = gamepad1.left_stick_x;
-        double strafe = gamepad1.right_stick_x;
-        v1 = speed + turn - strafe;
-        v2 = speed - turn + strafe;
-        v3 = speed + turn + strafe;
-        v4 = speed - turn - strafe;
-
-        //Scale variables to value between 0-1
-        double[] scalingArray = {v1,v2,v3,v4};
-        Arrays.sort(scalingArray);
-
-        v1/= scalingArray[3];
-        v2/= scalingArray[3];
-        v3/= scalingArray[3];
-        v4/= scalingArray[3];
-        */
-
-        //Controlling Linear Slides
+        // Controlling Linear Slides
         //-------------------------
-        if (horizontalCoolDown != 0) {
-            horizontalCoolDown += 1;
-            if (horizontalCoolDown == horizontalControlPoint)
-                horizontalCoolDown = 0;
+        if(gamepad1.x && !returningSlides){ //Return All Slides to 0 and Open Gripper if X is pressed
+            horizontalSlideMotor.setTargetPosition(0);
+            horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            horizontalSlideMotor.setPower(1);
+
+            verticalSlideMotor.setTargetPosition(0);
+            verticalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            verticalSlideMotor.setPower(1);
+
+            gripper.setPosition(openGripperPosition);
+
+            returningSlides = true; //Lock Normal Slide Control Until Slides are finished moving
         }
-
-        if (verticalCoolDown != 0) {
-            verticalCoolDown += 1;
-            if (verticalCoolDown == verticalControlPoint)
-                verticalCoolDown = 0;
+        else if(returningSlides && !verticalSlideMotor.isBusy() && !horizontalSlideMotor.isBusy()){
+            returningSlides = false; // Allow Manual Control of Slides again if both slides are done moving
+            horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            verticalSlideMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
-
-        // - Horizontal Slide
-        //if (gamepad1.right_trigger > 0.2 && horizontalTarget!=16 && horizontalCoolDown == 0){
-        //horizontalTarget+=1;
-        //horizontalCoolDown+=1;
-        //  horizontalPulley.setTargetPosition(horizontalTarget * horizontalBlockRotations + horizontalMin);
-        //    horizontalPulley.setPower(1);
-        //      horizontalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-        //}
-
-        //if (gamepad1.right_bumper && horizontalTarget !=0 && horizontalCoolDown == 0){
-        //    horizontalTarget-=1;
-        //  horizontalCoolDown+=1;
-        //horizontalPulley.setTargetPosition(horizontalTarget * horizontalBlockRotations + horizontalMin);
-        //horizontalPulley.setPower(1);
-        //horizontalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-        //}
-        // - Verical Slide
-        //if (gamepad1.left_trigger > 0.2 && verticalTarget !=3 && verticalCoolDown == 0){
-        //      verticalTarget +=1;
-        //    verticalCoolDown+=1;
-        //  verticalPulley.setTargetPosition(verticalTarget * verticalBlockRotations + verticalMin);
-        //verticalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        //verticalPulley.setPower(1);
-        //}
-
-        //if (gamepad1.left_bumper && verticalTarget != 0 && verticalCoolDown == 0)
-        //{
-        //  verticalTarget -= 1;
-        //verticalCoolDown+=1;
-        //verticalPulley.setTargetPosition(verticalTarget * verticalBlockRotations + verticalMin);
-        //verticalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        //verticalPulley.setPower(1);
-        //}
-
-        //new linear slide code
-
-        if(gamepad1.right_trigger > 0.2)
-        {
-            horizontalPulley.setPower(0.6);
-        }
-        else if(gamepad1.left_trigger > 0.2)
-        {
-            horizontalPulley.setPower(-0.6);
-        }
-        else
-        {
-            horizontalPulley.setPower(0.0);
-        }
-
-
-
-
-        if(gamepad1.right_bumper)
-        {
-            if(verticalPulley.getCurrentPosition() < 835)
-                verticalPulley.setPower(0.6);
-        }
-        else if(gamepad1.left_bumper)
-        {
-            verticalPulley.setPower(-0.6);
-        }
-        else
-        {
-            verticalPulley.setPower(0.0);
-        }
-
-
-
-        if (gripperCoolDown != 0) {
-            gripperCoolDown += 1;
-            if (gripperCoolDown == gripperControlPoint)
-                gripperCoolDown = 0;
-        }
-
-
-
-        //Activate Gripper
-        if (gamepad1.a && gripperCoolDown == 0) {
-            gripperCoolDown+=1;
-            if (gripper.getPosition() == closedGripperPosition)
-                gripper.setPosition(openGripperPosition);
+        else{ //Normal Control of Slides
+            // Vertical Slide
+            if (gamepad1.right_trigger > 0.2 && verticalSlideMotor.getCurrentPosition() < maxVerticalPosition)
+                verticalSlideMotor.setPower(slideSpeed);
+            else if (gamepad1.right_bumper && verticalSlideMotor.getCurrentPosition() > 0)
+                verticalSlideMotor.setPower(-slideSpeed);
             else
-                gripper.setPosition(closedGripperPosition);
+                verticalSlideMotor.setPower(0.0);
+
+            // Horizontal Slide
+            if (gamepad1.left_trigger > 0.2 && horizontalSlideMotor.getCurrentPosition() < maxHorizontalPosition) {
+                verticalSlideMotor.setPower(slideSpeed);
+            } else if (gamepad1.left_bumper && verticalSlideMotor.getCurrentPosition() > 0)
+                verticalSlideMotor.setPower(-slideSpeed);
+            else
+                verticalSlideMotor.setPower(0.0);
+
+
+            //Activate Gripper
+            if (gamepad1.a && !gripperButtonHeld) { //Only activate the first frame button is held down
+                gripperButtonHeld = true;
+                if (gripper.getPosition() == closedGripperPosition)
+                    gripper.setPosition(openGripperPosition);
+                else
+                    gripper.setPosition(closedGripperPosition);
+            } else if (!gamepad1.a)
+                gripperButtonHeld = false; // Allow another gripper activation after button has been released;
 
         }
 
-
-
-
-
-        frontLeftDrive.setPower(v1 * powerMultiplier);
-        frontRightDrive.setPower(v2 * powerMultiplier);
-        backLeftDrive.setPower(v3 * powerMultiplier);
-        backRightDrive.setPower(v4 * powerMultiplier);
-
-        telemetry.addData("Status", "Run Time: " + horizontalTarget);
-        telemetry.addData("Miles is sla e", "Run Time: " + gripperCoolDown);
-        telemetry.addData("vertical pulley positions", "horizontal: %d, vertical: %d", horizontalPulley.getCurrentPosition(), verticalPulley.getCurrentPosition());
+        telemetry.addData("vertical pulley positions", "horizontal: %d, vertical: %d", horizontalSlideMotor.getCurrentPosition(), verticalSlideMotor.getCurrentPosition());
     }
 
 
@@ -303,15 +196,32 @@ public class ControllerOpMode extends OpMode
 
     @Override
     public void stop() {
-        //  //   horizontalPulley.setTargetPosition(horizontalMin);
-        //   //  horizontalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        //         //    horizontalPulley.setPower(1);
-        //     verticalPulley.setTargetPosition(verticalMin);
-        //         verticalPulley.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        //     verticalPulley.setPower(1);
+        //  //   horizontalSlideMotor.setTargetPosition(horizontalMin);
+        //   //  horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        //         //    horizontalSlideMotor.setPower(1);
+        //     verticalSlideMotor.setTargetPosition(verticalMin);
+        //         verticalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        //     verticalSlideMotor.setPower(1);
 
-        //     while(horizontalPulley.isBusy() || verticalPulley.isBusy()){}
+        //     while(horizontalSlideMotor.isBusy() || verticalSlideMotor.isBusy()){}
 
 
+    }
+
+    // PRIVATE METHODS
+
+    /**
+     * Sets Appropriate Power Amounts to Wheels
+     * @param xComponent X Part of Movement Vector
+     * @param yComponent Y Part of Movement Vector
+     * @param turn How Much Robot Should Turn
+     */
+    private void moveRobot(double xComponent,double yComponent, double turn){
+        double r = Math.hypot(xComponent, yComponent);
+        double robotAngle = Math.atan2(xComponent,yComponent) + Math.PI / 4;
+        frontLeftDrive.setPower((r * Math.cos(robotAngle) + turn) * powerMultiplier);
+        frontRightDrive.setPower((r * Math.sin(robotAngle) - turn) * powerMultiplier);
+        backLeftDrive.setPower((r * Math.sin(robotAngle) + turn) * powerMultiplier);
+        backRightDrive.setPower((r * Math.cos(robotAngle) - turn) * powerMultiplier);
     }
 }
