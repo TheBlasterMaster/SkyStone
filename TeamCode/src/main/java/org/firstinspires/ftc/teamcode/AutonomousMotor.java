@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 /**
  * A class that holds values for the encoders of each motor and the wheel attached to it.
  */
-public class AutonomousMotor{
+public class AutonomousWheelMotor extends DcMotor{
     DcMotor motor = null;
 
     double COUNTS_PER_MOTOR_REV;
@@ -13,7 +13,7 @@ public class AutonomousMotor{
     double COUNTS_PER_INCH;
 
     /**
-     * Initializes the autonomousMotor
+     * Initializes the autonomousWheelMotor
      * @param incomingMotor a DcMotor that the Autonomous Motor describes.
      * @param encoderCount the amount of counts that the encoder performs per motor rotation (Google this number).
      * @param diameter the diameter of the wheel attached to the motor.

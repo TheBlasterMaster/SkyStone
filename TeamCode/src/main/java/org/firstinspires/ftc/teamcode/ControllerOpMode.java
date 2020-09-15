@@ -60,7 +60,7 @@ public class ControllerOpMode extends OpMode
 
 
 
-    private final double openGripperPosition = 0.4; // Percentage of servo turn when open
+    private final double openGripperPaosition = 0.4; // Percentage of servo turn when open
     private final double closedGripperPosition = 0; // Percentage of servo turn when closed
 
     private final double turnSensitvity = 0.5; // Multiplier to Turn Speed
@@ -71,7 +71,7 @@ public class ControllerOpMode extends OpMode
     private final double slideSpeed = 0.6; // Multiplier to the Speed of Retracting and Extending the Slides
 
     private final int maxHorizontalPosition = 0; //The farthest the arm can extend forward.
-    private final int maxVerticalPosition = 0; //The furthest the arm can extend upward.
+    private final int maxVerticalPosition = 0; //The furthest the arm can extend upwrd.
 
 
     @Override
@@ -196,14 +196,14 @@ public class ControllerOpMode extends OpMode
 
     @Override
     public void stop() {
-        //  //   horizontalSlideMotor.setTargetPosition(horizontalMin);
-        //   //  horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        //         //    horizontalSlideMotor.setPower(1);
-        //     verticalSlideMotor.setTargetPosition(verticalMin);
-        //         verticalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        //     verticalSlideMotor.setPower(1);
+        //horizontalSlideMotor.setTargetPosition(horizontalMin);
+        //horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        //horizontalSlideMotor.setPower(1);
+        //verticalSlideMotor.setTargetPosition(verticalMin);
+        //verticalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        //verticalSlideMotor.setPower(1);
 
-        //     while(horizontalSlideMotor.isBusy() || verticalSlideMotor.isBusy()){}
+        //while(horizontalSlideMotor.isBusy() || verticalSlideMotor.isBusy()){}
 
 
     }

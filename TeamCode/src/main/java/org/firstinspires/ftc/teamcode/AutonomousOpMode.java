@@ -5,7 +5,6 @@ import com.qualcomm.robotcore.robot.Robot;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
-//NEW
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -13,60 +12,47 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 @Autonomous(name="Iron Golem Autonomous", group="Mechanum Bot")
 public class AutonomousOpMode extends LinearOpMode {
-
+    //ElaspedTime Object allows us to use Time (Unused in this program)
     private ElapsedTime runtime = new ElapsedTime();
 
-    private AutonomousMotor frontLeftDrive = null;
-    private AutonomousMotor frontRightDrive = null;
-    private AutonomousMotor backLeftDrive = null;
-    private AutonomousMotor backRightDrive = null;
+    //Initalizing 4 Drive Train Motors
+    DcMotor frntLft = hardwareMap.get(DcMotor.class, "front_left");
+    DcMotor frntRght = hardwareMap.get(DcMotor.class, "front_right");
+    DcMotor bckLft = hardwareMap.get(DcMotor.class, "back_left");
+    DcMotor bckRght = hardwareMap.get(DcMotor.class, "back_right");
+
+    //Set The right motors to be reversed to compensate for their orientation
+    frntLft.setDirection(DcMotor.Direction.FORWARD);
+    frntRght.setDirection(DcMotor.Direction.REVERSE);
+    bckLft.setDirection(DcMotor.Direction.FORWARD);
+    bckRght.setDirection(DcMotor.Direction.REVERSE);
+
+    //Creates New Autonomous Wheel Objects (The file to this class is in this same folder).  
+    //Does the calculations for how many turns motor needs to do for robot to go X inches forward
+    private AutonomousWheelMotor frontLeftDrive = new AutonomousWheelMotor(frntLft, 2240, 2.95276);
+    private AutonomousWheelMotor frontRightDrive = new AutonomousWheelMotor(frntRght, 2240, 2.95276);
+    private AutonomousWheelMotor backLeftDrive = new AutonomousWheelMotor(bckLft, 2240, 2.95276);
+    private AutonomousWheelMotor backRightDrive = new AutonomousWheelMotor(bckRght, 2240, 2.95276);
     
-    //NEW
-    private Servo foundationGripper1 = null;
-    private Servo foundationGripper2 = null;
-    //----
+    // Initalizes Servos for Foundation Grippers
+    private Servo foundationGripper1 = hardwareMap.get(Servo.class, "gripper1");
+    private Servo foundationGripper2 = hardwareMap.get(Servo.class, "gripper2");
+    
+    //When a robot turns in place, its wheels trace a circle. The Diameter of the Circle is the distance between the wheels
+    //The wheels have to move the distance along the circle to turn. The follwoing calculates that.
     private final double widthOfRobot = 16;
     private final double robotTurningCircumference = widthOfRobot * Math.PI;
+
+    //Compensates for the gear ratio of the wheels and for slippage in the wheels
     private final double gearAndFrictionConstant = 8.0/27;
 
-    private AutonomousMotor[] movement = new AutonomousMotor[4];
+    //The Autonomous Movement Command has been programmed to work with an array of motors so that it can work with
+    //any amount of motors. The movement array is an array of all 4 of our drivetrain motors.
+    private AutonomousWheelMotor[] movement = {frontLeftDrive, frontRightDrive, backLeftDrive, backRightDrive};
 
     //------
     @Override
-    public void runOpMode() throws InterruptedException {
-
-        //Initializing Motors
-        DcMotor frntLft = hardwareMap.get(DcMotor.class, "front_left");
-        DcMotor frntRght = hardwareMap.get(DcMotor.class, "front_right");
-        DcMotor bckLft = hardwareMap.get(DcMotor.class, "back_left");
-        DcMotor bckRght = hardwareMap.get(DcMotor.class, "back_right");
-        //NEW
-        Servo foundationGripper1 = hardwareMap.get(Servo.class, "gripper1");
-        Servo foundationGripper2 = hardwareMap.get(Servo.class, "gripper1");
-
-
-        frntLft.setDirection(DcMotor.Direction.FORWARD);
-        frntRght.setDirection(DcMotor.Direction.REVERSE);
-        bckLft.setDirection(DcMotor.Direction.FORWARD);
-        bckRght.setDirection(DcMotor.Direction.REVERSE);
-
-        frntLft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        frntRght.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        bckLft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        bckRght.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-        frontLeftDrive  = new AutonomousMotor(frntLft, 2240, 2.95276 );
-        frontRightDrive = new AutonomousMotor(frntRght, 2240, 2.95276 );
-        backLeftDrive  = new AutonomousMotor(bckLft, 2240, 2.95276 );
-        backRightDrive = new AutonomousMotor(bckRght, 2240, 2.95276 );
-
-        movement[0] = frontLeftDrive;
-        movement[1] = frontRightDrive;
-        movement[2] = backLeftDrive;
-        movement[3] = backRightDrive;
-
-
-
+    public void runOpMode() throws InterruptedException { 
         //EXAMPLE AUTONOMOUS CODE
 
         //Move Robot forward 8 inches at 50% speed
@@ -85,42 +71,45 @@ public class AutonomousOpMode extends LinearOpMode {
 
 
     /**
-     * autonomousMovementCommand moves all provided motors and servos while taking into mind our gear Ratios.
+     * autonomousMovementCommand moves all provided motors and servos while taking into mind gear rations and friction.
      * @param args a list of all motors to turn
      * @param inches the inches that each motor will move the robot. This array corresponds to args.
      * @param speed a value between 0 and 1 that represents the speed the motors move at to reach their goal
      */
-    public void autonomousMovementCommand(AutonomousMotor[] args, double[] inches, double speed) {
+    public void autonomousMovementCommand(AutonomousWheelMotor[] args, double[] inches, double speed) {
 
-        //if (opModeIsActive()) {
+        //Delted Code: if (opModeIsActive()) {
 
-        //Calculate Speed and Encoder Target for each motor
+        //Holds the target encoder value for every motor
         double targets[] = new double[args.length];
 
+        //Sets every motor to run to the correct end position
         for (int i = 0; i<args.length; i++) {
-            AutonomousMotor currentMotor = args[i];
+            AutonomousWheelMotor currentMotor = args[i];
 
-            int newTarget = currentMotor.motor.getCurrentPosition() + (int) (inches[i] * gearAndFrictionConstant* currentMotor.COUNTS_PER_INCH);
+            int newTarget = currentMotor.motor.getCurrentPosition() + (int) (inches[i] * gearAndFrictionConstant * currentMotor.COUNTS_PER_INCH);
             targets[i] = (int) (inches[i] * currentMotor.COUNTS_PER_INCH);
             currentMotor.motor.setTargetPosition(newTarget);
             currentMotor.motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         }
 
+        //Turns every number into a proportional number between 0-1. Used for the speed values, and makes every motor finish at the same time
         targets = divideByLargestInArray(targets,speed);
+
         //Set The Speeds to each motor
         for (int i = 0; i<args.length; i++) {
-            AutonomousMotor currentMotor = args[i];
+            AutonomousWheelMotor currentMotor = args[i];
             currentMotor.motor.setPower(targets[i]);
         }
 
-        //Run Each Motor to the Target
-        //whileOpModeIsActive
+        //Wait for all motors to finish activity
+        //Delted Code: whileOpModeIsActive
         while (args[0].motor.isBusy()) {
 
         }
 
         //Stop Each Motor
-        for (AutonomousMotor currentMotor : args) {
+        for (AutonomousWheelMotor currentMotor : args) {
             currentMotor.motor.setPower(0);
             currentMotor.motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
@@ -133,15 +122,16 @@ public class AutonomousOpMode extends LinearOpMode {
      * @param inches the inches that each motor will move the robot. This array corresponds to args.
      * @param speed a value between 0 and 1 that represents the speed the motors move at to reach their goal
      */
-    public void autonomousCommand(AutonomousMotor[] args, double[] inches, double speed) {
+    public void autonomousCommand(AutonomousWheelMotor[] args, double[] inches, double speed) {
 
-        //if (opModeIsActive()) {
+        //Deleted: if (opModeIsActive()) {
 
         //Calculate Speed and Encoder Target for each motor
         double targets[] = new double[args.length];
 
+        //Sets every motor to run to the correct end position
         for (int i = 0; i<args.length; i++) {
-            AutonomousMotor currentMotor = args[i];
+            AutonomousWheelMotor currentMotor = args[i];
 
             int newTarget = currentMotor.motor.getCurrentPosition() + (int) (inches[i] * currentMotor.COUNTS_PER_INCH);
             targets[i] = (int) (inches[i] * currentMotor.COUNTS_PER_INCH);
@@ -149,21 +139,23 @@ public class AutonomousOpMode extends LinearOpMode {
             currentMotor.motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         }
 
+        //Turns every number into a proportional number between 0-1. Used for the speed values, and makes every motor finish at the same time
         targets = divideByLargestInArray(targets,speed);
+
         //Set The Speeds to each motor
         for (int i = 0; i<args.length; i++) {
-            AutonomousMotor currentMotor = args[i];
+            AutonomousWheelMotor currentMotor = args[i];
             currentMotor.motor.setPower(targets[i]);
         }
 
-        //Run Each Motor to the Target
-        //whileOpModeIsActive
+        //Wait for all motors to finish activity
+        //Deleted : whileOpModeIsActive
         while (args[0].motor.isBusy()) {
 
         }
 
         //Stop Each Motor
-        for (AutonomousMotor currentMotor : args) {
+        for (AutonomousWheelMotor currentMotor : args) {
             currentMotor.motor.setPower(0);
             currentMotor.motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
@@ -205,9 +197,9 @@ public class AutonomousOpMode extends LinearOpMode {
     private void move(double degrees, double inches, double speed){
         double robotAngle = Math.toRadians(-degrees) + Math.PI / 4;
         double inchArray[] = {inches * Math.cos(robotAngle),
-                inches * Math.sin(robotAngle),
-                inches * Math.sin(robotAngle),
-                inches * Math.cos(robotAngle)};
+                              inches * Math.sin(robotAngle),
+                              inches * Math.sin(robotAngle),
+                              inches * Math.cos(robotAngle)};
         autonomousMovementCommand(movement,inchArray,speed);
 
     }
@@ -222,7 +214,7 @@ public class AutonomousOpMode extends LinearOpMode {
                 largest = number;
 
         for(int i = 0; i<array.length; i++)
-            array[i]= (array[i]/largest) * multiplier;
+            array[i] = (array[i]/largest) * multiplier;
 
         return array;
 
