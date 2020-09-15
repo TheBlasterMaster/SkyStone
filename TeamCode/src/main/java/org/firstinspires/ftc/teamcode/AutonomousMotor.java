@@ -28,5 +28,6 @@ public class AutonomousMotor{
 
         COUNTS_PER_INCH=(COUNTS_PER_MOTOR_REV)/
                 (WHEEL_DIAMETER_INCHES*3.1415);
+
     }
 }

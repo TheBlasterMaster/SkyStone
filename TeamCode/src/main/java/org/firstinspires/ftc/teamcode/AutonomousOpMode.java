@@ -7,7 +7,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 //NEW
 import com.qualcomm.robotcore.hardware.Servo;
-____
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -16,10 +15,12 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 public class AutonomousOpMode extends LinearOpMode {
 
     private ElapsedTime runtime = new ElapsedTime();
+
     private AutonomousMotor frontLeftDrive = null;
     private AutonomousMotor frontRightDrive = null;
     private AutonomousMotor backLeftDrive = null;
     private AutonomousMotor backRightDrive = null;
+    
     //NEW
     private Servo foundationGripper1 = null;
     private Servo foundationGripper2 = null;
@@ -76,7 +77,7 @@ public class AutonomousOpMode extends LinearOpMode {
 
         //Move 8 Inches at -18 Degrees at 50% speed
         move(-18,8,0.5);
-
+        
         //NEW (ACTIVATE FOUNDATION GRIPPER)
         foundationGripper1.setPosition(0.2);
         foundationGripper2.setPosition(0.2);
