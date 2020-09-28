@@ -76,9 +76,6 @@ public class ControllerOpMode extends OpMode
 
     @Override
     public void init() {
-        telemetry.addData("Status", "Initialized");
-
-
         frontLeftDrive  = hardwareMap.get(DcMotor.class, "front_left");
         frontRightDrive = hardwareMap.get(DcMotor.class, "front_right");
         backLeftDrive  = hardwareMap.get(DcMotor.class, "back_left");
@@ -100,6 +97,7 @@ public class ControllerOpMode extends OpMode
         horizontalSlideMotor.setDirection(DcMotor.Direction.REVERSE);
         verticalSlideMotor.setDirection(DcMotor.Direction.FORWARD);
 
+        telemetry.addData("Status", "Initialized");
     }
 
 
@@ -217,11 +215,24 @@ public class ControllerOpMode extends OpMode
      * @param turn How Much Robot Should Turn
      */
     private void moveRobot(double xComponent,double yComponent, double turn){
-        double r = Math.hypot(xComponent, yComponent);
+        double r = controllerInputAdjustment( Math.hypot(xComponent, yComponent) );
         double robotAngle = Math.atan2(xComponent,yComponent) + Math.PI / 4;
         frontLeftDrive.setPower((r * Math.cos(robotAngle) + turn) * powerMultiplier);
         frontRightDrive.setPower((r * Math.sin(robotAngle) - turn) * powerMultiplier);
         backLeftDrive.setPower((r * Math.sin(robotAngle) + turn) * powerMultiplier);
         backRightDrive.setPower((r * Math.cos(robotAngle) - turn) * powerMultiplier);
+    }
+
+    /**
+     * 
+     * @param input Strength of the controller input (hypotenuse of X and Y input)
+     * @return input adjusted by a function
+     */
+    private double controllerInputAdjustment(double input){
+        //An exponential function makes controlling much more precise, since most inputs will barely change the speed,
+        //and only inputs very faraway from the origin will result in higher speeds.
+        
+        //800^(x-1)
+        return Math.pow(800.0,input-1);
     }
 }
