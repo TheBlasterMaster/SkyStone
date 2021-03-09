@@ -16,57 +16,75 @@ public class AutonomousOpMode extends LinearOpMode {
     private ElapsedTime runtime = new ElapsedTime();
 
     //Initalizing 4 Drive Train Motors
-    DcMotor frntLft = hardwareMap.get(DcMotor.class, "front_left");
-    DcMotor frntRght = hardwareMap.get(DcMotor.class, "front_right");
-    DcMotor bckLft = hardwareMap.get(DcMotor.class, "back_left");
-    DcMotor bckRght = hardwareMap.get(DcMotor.class, "back_right");
-
-    //Set The right motors to be reversed to compensate for their orientation
-    frntLft.setDirection(DcMotor.Direction.FORWARD);
-    frntRght.setDirection(DcMotor.Direction.REVERSE);
-    bckLft.setDirection(DcMotor.Direction.FORWARD);
-    bckRght.setDirection(DcMotor.Direction.REVERSE);
+    DcMotor frntLft;
+    DcMotor frntRght;
+    DcMotor bckLft;
+    DcMotor bckRght;
+       
 
     //Creates New Autonomous Wheel Objects (The file to this class is in this same folder).  
     //Does the calculations for how many turns motor needs to do for robot to go X inches forward
-    private AutonomousWheelMotor frontLeftDrive = new AutonomousWheelMotor(frntLft, 2240, 2.95276);
-    private AutonomousWheelMotor frontRightDrive = new AutonomousWheelMotor(frntRght, 2240, 2.95276);
-    private AutonomousWheelMotor backLeftDrive = new AutonomousWheelMotor(bckLft, 2240, 2.95276);
-    private AutonomousWheelMotor backRightDrive = new AutonomousWheelMotor(bckRght, 2240, 2.95276);
-    
-    // Initalizes Servos for Foundation Grippers
-    private Servo foundationGripper1 = hardwareMap.get(Servo.class, "gripper1");
-    private Servo foundationGripper2 = hardwareMap.get(Servo.class, "gripper2");
+    private AutonomousWheelMotor frontLeftDrive;
+    private AutonomousWheelMotor frontRightDrive;
+    private AutonomousWheelMotor backLeftDrive;
+    private AutonomousWheelMotor backRightDrive;
+
     
     //When a robot turns in place, its wheels trace a circle. The Diameter of the Circle is the distance between the wheels
     //The wheels have to move the distance along the circle to turn. The follwoing calculates that.
-    private final double widthOfRobot = 16;
+    private final double widthOfRobot = 2.1*16;
     private final double robotTurningCircumference = widthOfRobot * Math.PI;
 
     //Compensates for the gear ratio of the wheels and for slippage in the wheels
-    private final double gearAndFrictionConstant = 8.0/27;
+    private final double gearAndFrictionConstant = 0.31604;
 
     //The Autonomous Movement Command has been programmed to work with an array of motors so that it can work with
     //any amount of motors. The movement array is an array of all 4 of our drivetrain motors.
-    private AutonomousWheelMotor[] movement = {frontLeftDrive, frontRightDrive, backLeftDrive, backRightDrive};
+    private AutonomousWheelMotor[] movement;
 
     //------
     @Override
     public void runOpMode() throws InterruptedException { 
+        frntLft  = hardwareMap.get(DcMotor.class, "front_left");
+        frntRght = hardwareMap.get(DcMotor.class, "front_right");
+        bckLft  = hardwareMap.get(DcMotor.class, "back_left");
+        bckRght = hardwareMap.get(DcMotor.class, "back_right");
+       
+
+        //Creates New Autonomous Wheel Objects (The file to this class is in this same folder).  
+        //Does the calculations for how many turns motor needs to do for robot to go X inches forward
+        frontLeftDrive = new AutonomousWheelMotor(frntLft, 2240, 2.95276);
+        frontRightDrive = new AutonomousWheelMotor(frntRght, 2240, 2.95276);
+        backLeftDrive = new AutonomousWheelMotor(bckLft, 2240, 2.95276);
+        backRightDrive = new AutonomousWheelMotor(bckRght, 2240, 2.95276);
+    
+        frntLft.setDirection(DcMotor.Direction.FORWARD);
+        frntRght.setDirection(DcMotor.Direction.REVERSE);
+        bckLft.setDirection(DcMotor.Direction.FORWARD);
+        bckRght.setDirection(DcMotor.Direction.REVERSE);
+        
+        AutonomousWheelMotor[] movementTemp = {frontLeftDrive, frontRightDrive, backLeftDrive, backRightDrive};
+        movement = movementTemp;
+
+        telemetry.addData("Status", "Initialized");
         //EXAMPLE AUTONOMOUS CODE
 
         //Move Robot forward 8 inches at 50% speed
-        manualMove(8,8,8,8,0.5);
+        //manualMove(8,8,8,8,0.5);
 
         //Turn Robot 90 Degrees at 50% speed
-        turn(90,0.5);
+        //turn(90,0.5);
 
         //Move 8 Inches at -18 Degrees at 50% speed
-        move(-18,8,0.5);
+        //move(0,8,0.5);
         
-        //NEW (ACTIVATE FOUNDATION GRIPPER)
-        foundationGripper1.setPosition(0.2);
-        foundationGripper2.setPosition(0.2);
+        move(0,40,1);
+        turn(180,1);
+        move(0,40,1);
+        
+       
+        
+        
     }
 
 
@@ -185,7 +203,7 @@ public class AutonomousOpMode extends LinearOpMode {
         double turningInches = robotTurningCircumference * (degrees/360);
         turningInches /= 2;
         double inches[] = {turningInches,-turningInches,turningInches,-turningInches};
-        autonomousCommand(movement,inches,speed);
+        autonomousMovementCommand(movement,inches,speed);
     }
 
     /**
@@ -222,6 +240,3 @@ public class AutonomousOpMode extends LinearOpMode {
 
 
 }
-
-
-

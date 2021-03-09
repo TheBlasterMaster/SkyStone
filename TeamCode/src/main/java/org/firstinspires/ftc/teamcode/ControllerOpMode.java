@@ -1,4 +1,5 @@
 /* Copyright (c) 2017 FIRST. All rights reserved.
+/* Copyright (c) 2017 FIRST. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted (subject to the limitations in the disclaimer below) provided that
@@ -51,27 +52,14 @@ public class ControllerOpMode extends OpMode
     private DcMotor frontRightDrive = null;
     private DcMotor backLeftDrive = null;
     private DcMotor backRightDrive = null;
-    private DcMotor horizontalSlideMotor = null;
-    private DcMotor verticalSlideMotor = null;
+    private DcMotor intakeMotor = null;
 
-    private Servo gripper = null;
-    private boolean gripperButtonHeld = false;
-    private boolean returningSlides = false;
-
-
-
-    private final double openGripperPaosition = 0.4; // Percentage of servo turn when open
-    private final double closedGripperPosition = 0; // Percentage of servo turn when closed
-
-    private final double turnSensitvity = 0.5; // Multiplier to Turn Speed
+    private final double turnSensitvity = 0.7; // Multiplier to Turn Speed
 
     private final double powerMultiplier = 1; // Multiplier to the Movement Speed of Robot
-    private final double buildModeSensitivity = 0.25; //Multipler to Movement while holding "B"
+    private final double buildModeSensitivity = 0.8; //Multipler to Movement while holding "B"
 
-    private final double slideSpeed = 0.6; // Multiplier to the Speed of Retracting and Extending the Slides
-
-    private final int maxHorizontalPosition = 0; //The farthest the arm can extend forward.
-    private final int maxVerticalPosition = 0; //The furthest the arm can extend upwrd.
+    private final double intakePower = 0.7; // Controls speed of the intake rollers
 
 
     @Override
@@ -80,23 +68,15 @@ public class ControllerOpMode extends OpMode
         frontRightDrive = hardwareMap.get(DcMotor.class, "front_right");
         backLeftDrive  = hardwareMap.get(DcMotor.class, "back_left");
         backRightDrive = hardwareMap.get(DcMotor.class, "back_right");
-        horizontalSlideMotor = hardwareMap.get(DcMotor.class, "horiz");
-        verticalSlideMotor = hardwareMap.get(DcMotor.class, "vert");
-        gripper = hardwareMap.get(Servo.class, "gripper");
-
-        horizontalSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        verticalSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        verticalSlideMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        intakeMotor = hardwareMap.get(DcMotor.class, "intake");
 
 
         frontRightDrive.setDirection(DcMotor.Direction.FORWARD);
         frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backRightDrive.setDirection(DcMotor.Direction.FORWARD);
-        horizontalSlideMotor.setDirection(DcMotor.Direction.REVERSE);
-        verticalSlideMotor.setDirection(DcMotor.Direction.FORWARD);
-
+        intakeMotor.setDirection(DcMotor.Direction.FORWARD);
+         
         telemetry.addData("Status", "Initialized");
     }
 
@@ -128,7 +108,7 @@ public class ControllerOpMode extends OpMode
          *   X: Return Slides to 0 and Open Gripper
          ---------------------------**/
 
-
+        intakeMotor.setPower(intakePower);
         // Movement
         //------------
         if(gamepad1.b) //Slow Down Movement Speed if B is held Down
@@ -136,57 +116,9 @@ public class ControllerOpMode extends OpMode
         else
             moveRobot(gamepad1.left_stick_x, gamepad1.left_stick_y,gamepad1.right_stick_x * turnSensitvity);
 
-        // Controlling Linear Slides
-        //-------------------------
-        if(gamepad1.x && !returningSlides){ //Return All Slides to 0 and Open Gripper if X is pressed
-            horizontalSlideMotor.setTargetPosition(0);
-            horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            horizontalSlideMotor.setPower(1);
 
-            verticalSlideMotor.setTargetPosition(0);
-            verticalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            verticalSlideMotor.setPower(1);
-
-            gripper.setPosition(openGripperPosition);
-
-            returningSlides = true; //Lock Normal Slide Control Until Slides are finished moving
-        }
-        else if(returningSlides && !verticalSlideMotor.isBusy() && !horizontalSlideMotor.isBusy()){
-            returningSlides = false; // Allow Manual Control of Slides again if both slides are done moving
-            horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            verticalSlideMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        }
-        else{ //Normal Control of Slides
-            // Vertical Slide
-            if (gamepad1.right_trigger > 0.2 && verticalSlideMotor.getCurrentPosition() < maxVerticalPosition)
-                verticalSlideMotor.setPower(slideSpeed);
-            else if (gamepad1.right_bumper && verticalSlideMotor.getCurrentPosition() > 0)
-                verticalSlideMotor.setPower(-slideSpeed);
-            else
-                verticalSlideMotor.setPower(0.0);
-
-            // Horizontal Slide
-            if (gamepad1.left_trigger > 0.2 && horizontalSlideMotor.getCurrentPosition() < maxHorizontalPosition) {
-                verticalSlideMotor.setPower(slideSpeed);
-            } else if (gamepad1.left_bumper && verticalSlideMotor.getCurrentPosition() > 0)
-                verticalSlideMotor.setPower(-slideSpeed);
-            else
-                verticalSlideMotor.setPower(0.0);
-
-
-            //Activate Gripper
-            if (gamepad1.a && !gripperButtonHeld) { //Only activate the first frame button is held down
-                gripperButtonHeld = true;
-                if (gripper.getPosition() == closedGripperPosition)
-                    gripper.setPosition(openGripperPosition);
-                else
-                    gripper.setPosition(closedGripperPosition);
-            } else if (!gamepad1.a)
-                gripperButtonHeld = false; // Allow another gripper activation after button has been released;
-
-        }
-
-        telemetry.addData("vertical pulley positions", "horizontal: %d, vertical: %d", horizontalSlideMotor.getCurrentPosition(), verticalSlideMotor.getCurrentPosition());
+        telemetry.addData("Stick Data", "X: %d, Y: %d", (int)(gamepad1.left_stick_x*100) , (int)(gamepad1.left_stick_y*100));
+        //m
     }
 
 
@@ -201,8 +133,7 @@ public class ControllerOpMode extends OpMode
         //verticalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         //verticalSlideMotor.setPower(1);
 
-        //while(horizontalSlideMotor.isBusy() || verticalSlideMotor.isBusy()){}
-
+        //while(horizontalSlideMotor.isBusy() || verticalSlideMotor.isBusy())
 
     }
 
@@ -214,15 +145,42 @@ public class ControllerOpMode extends OpMode
      * @param yComponent Y Part of Movement Vector
      * @param turn How Much Robot Should Turn
      */
-    private void moveRobot(double xComponent,double yComponent, double turn){
+     private void moveRobot(double xComponent,double yComponent, double turn){
         double r = controllerInputAdjustment( Math.hypot(xComponent, yComponent) );
-        double robotAngle = Math.atan2(xComponent,yComponent) + Math.PI / 4;
-        frontLeftDrive.setPower((r * Math.cos(robotAngle) + turn) * powerMultiplier);
-        frontRightDrive.setPower((r * Math.sin(robotAngle) - turn) * powerMultiplier);
-        backLeftDrive.setPower((r * Math.sin(robotAngle) + turn) * powerMultiplier);
-        backRightDrive.setPower((r * Math.cos(robotAngle) - turn) * powerMultiplier);
+        telemetry.addData("Radius", "R: %d", (int)(r*100));
+        double robotAngle = Math.PI - Math.atan2(xComponent,yComponent) + Math.PI/4 + Math.PI ;
+        
+        double turnAmount = turn*turnSensitvity;
+        double[] input = {r*Math.cos(robotAngle),
+                          r* Math.sin(robotAngle),
+                          r*Math.sin(robotAngle),
+                          r*Math.cos(robotAngle)};
+                          
+        double magnitudeOfMovement = r * powerMultiplier;
+        double[] proportionList = normalizeList(input, 1 - Math.abs(turnAmount));
+        frontLeftDrive.setPower(proportionList[0] * magnitudeOfMovement + turnAmount);
+        frontRightDrive.setPower(proportionList[1] * magnitudeOfMovement - turnAmount);
+        backLeftDrive.setPower(proportionList[2] * magnitudeOfMovement + turnAmount);
+        backRightDrive.setPower(proportionList[3] * magnitudeOfMovement - turnAmount);
     }
-
+    
+    
+    /**
+     * Takes in list of doubles, returns list with biggest original value set to max parameter
+     * @param input double array of numbers to be normalized
+     * @param max double that dictaces what the biggest number in the list is set to
+     */
+     private double[] normalizeList (double[] input, double max){
+         double biggestdouble = -2;
+         for(double e: input)
+            if (Math.abs(e)> biggestdouble)
+                biggestdouble = Math.abs(e);
+        biggestdouble/= max; // Multipliying in the max
+        for(int i= 0; i<input.length; i++){
+            input[i]/= biggestdouble;
+        }
+        return input;
+     }
     /**
      * 
      * @param input Strength of the controller input (hypotenuse of X and Y input)
@@ -233,6 +191,6 @@ public class ControllerOpMode extends OpMode
         //and only inputs very faraway from the origin will result in higher speeds.
         
         //800^(x-1)
-        return Math.pow(800.0,input-1);
+        return Math.pow(30.0,(1.00964*input)-1) - (1/30);
     }
 }
