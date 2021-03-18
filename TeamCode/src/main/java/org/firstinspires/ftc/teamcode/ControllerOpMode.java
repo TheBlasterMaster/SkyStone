@@ -53,13 +53,17 @@ public class ControllerOpMode extends OpMode
     private DcMotor backLeftDrive = null;
     private DcMotor backRightDrive = null;
     private DcMotor intakeMotor = null;
+    private DcMotor intakeMotor2 = null;
+    private DcMotor flyWheel = null;
 
-    private final double turnSensitvity = 0.7; // Multiplier to Turn Speed
+    private Servo trigger = null;
+    
+    private final double turnSensitvity = 1; // Multiplier to Turn Speed
 
     private final double powerMultiplier = 1; // Multiplier to the Movement Speed of Robot
     private final double buildModeSensitivity = 0.8; //Multipler to Movement while holding "B"
 
-    private final double intakePower = 0.7; // Controls speed of the intake rollers
+    private final double intakePower = 1; // Controls speed of the intake rollers
 
 
     @Override
@@ -69,13 +73,17 @@ public class ControllerOpMode extends OpMode
         backLeftDrive  = hardwareMap.get(DcMotor.class, "back_left");
         backRightDrive = hardwareMap.get(DcMotor.class, "back_right");
         intakeMotor = hardwareMap.get(DcMotor.class, "intake");
-
+        intakeMotor2 = hardwareMap.get(DcMotor.class, "intake2");
+        flyWheel = hardwareMap.get(DcMotor.class, "flywheel");
+        trigger = hardwareMap.get(Servo.class, "trigger");
 
         frontRightDrive.setDirection(DcMotor.Direction.FORWARD);
         frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backRightDrive.setDirection(DcMotor.Direction.FORWARD);
-        intakeMotor.setDirection(DcMotor.Direction.FORWARD);
+        intakeMotor.setDirection(DcMotor.Direction.REVERSE);
+        intakeMotor2.setDirection(DcMotor.Direction.REVERSE);
+        flyWheel.setDirection(DcMotor.Direction.REVERSE);
          
         telemetry.addData("Status", "Initialized");
     }
@@ -107,8 +115,28 @@ public class ControllerOpMode extends OpMode
          *   B: Build Mode, Slows Down Movement
          *   X: Return Slides to 0 and Open Gripper
          ---------------------------**/
-
-        intakeMotor.setPower(intakePower);
+        if(gamepad1.a){
+            intakeMotor.setPower(intakePower);
+            intakeMotor2.setPower(1);
+        }
+        else{
+             intakeMotor.setPower(0);
+            intakeMotor2.setPower(0);
+        }
+        
+        if(gamepad1.right_trigger > 0.1){
+            flyWheel.setPower(1);
+        }
+        else{
+            flyWheel.setPower(0);
+        }
+        
+        if(gamepad1.left_trigger > 0.1){
+            trigger.setPosition(0.25);
+        }
+        else{
+            trigger.setPosition(0);
+        }
         // Movement
         //------------
         if(gamepad1.b) //Slow Down Movement Speed if B is held Down
