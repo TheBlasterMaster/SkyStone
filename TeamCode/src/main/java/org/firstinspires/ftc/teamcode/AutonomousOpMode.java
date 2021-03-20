@@ -20,7 +20,10 @@ public class AutonomousOpMode extends LinearOpMode {
     DcMotor frntRght;
     DcMotor bckLft;
     DcMotor bckRght;
-       
+    
+    //Initalizing Flywheel
+    DcMotor flywheel;
+    Servo trigger; 
 
     //Creates New Autonomous Wheel Objects (The file to this class is in this same folder).  
     //Does the calculations for how many turns motor needs to do for robot to go X inches forward
@@ -49,6 +52,9 @@ public class AutonomousOpMode extends LinearOpMode {
         frntRght = hardwareMap.get(DcMotor.class, "front_right");
         bckLft  = hardwareMap.get(DcMotor.class, "back_left");
         bckRght = hardwareMap.get(DcMotor.class, "back_right");
+        flywheel = hardwareMap.get(DcMotor.class, "flywheel");
+        trigger = hardwareMap.get(Servo.class, "trigger");
+
        
 
         //Creates New Autonomous Wheel Objects (The file to this class is in this same folder).  
@@ -76,14 +82,12 @@ public class AutonomousOpMode extends LinearOpMode {
         //turn(90,0.5);
 
         //Move 8 Inches at -18 Degrees at 50% speed
-        //move(0,8,0.5);
+        //move(-18,8,0.5);
         
-        move(0,40,1);
-        turn(180,1);
-        move(0,40,1);
-        
-       
-        
+        trigger.setPosition(0);
+        move(0,70,0.5);
+        turn(7,0.5);
+        shoot(0.8);
         
     }
 
@@ -96,7 +100,7 @@ public class AutonomousOpMode extends LinearOpMode {
      */
     public void autonomousMovementCommand(AutonomousWheelMotor[] args, double[] inches, double speed) {
 
-        //Delted Code: if (opModeIsActive()) {
+        //Deleted Code: if (opModeIsActive()) {
 
         //Holds the target encoder value for every motor
         double targets[] = new double[args.length];
@@ -222,6 +226,22 @@ public class AutonomousOpMode extends LinearOpMode {
 
     }
 
+    public void shoot(double power)
+    {
+        int swag = 0;
+        flywheel.setPower(-power);
+        sleep(2000);
+        for(int i = 0;i < 3;i++)
+        {
+            trigger.setPosition(0.25);
+            sleep(1000);
+            trigger.setPosition(0);
+            sleep(1000);
+        }
+        flywheel.setPower(0);
+
+    }
+    
     /**
      * Helper method that converts an array into a 0-1 format
      */
@@ -240,3 +260,6 @@ public class AutonomousOpMode extends LinearOpMode {
 
 
 }
+
+
+
