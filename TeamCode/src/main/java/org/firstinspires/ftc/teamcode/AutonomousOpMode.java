@@ -1,6 +1,9 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.PIDCoefficients;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.robot.Robot;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -21,9 +24,14 @@ public class AutonomousOpMode extends LinearOpMode {
     DcMotor bckLft;
     DcMotor bckRght;
     
+    //Initializing Sensors
+    private ColorSensor top = null;
+    private ColorSensor bottom = null;
+    
     //Initalizing Flywheel
-    DcMotor flywheel;
-    Servo trigger; 
+    DcMotorEx flywheel;
+    Servo trigger;
+    Servo funnel_trigger; 
 
     //Creates New Autonomous Wheel Objects (The file to this class is in this same folder).  
     //Does the calculations for how many turns motor needs to do for robot to go X inches forward
@@ -31,6 +39,10 @@ public class AutonomousOpMode extends LinearOpMode {
     private AutonomousWheelMotor frontRightDrive;
     private AutonomousWheelMotor backLeftDrive;
     private AutonomousWheelMotor backRightDrive;
+    
+    private DcMotor wobbleArm;
+    
+    private Servo gripper = null;
 
     
     //When a robot turns in place, its wheels trace a circle. The Diameter of the Circle is the distance between the wheels
@@ -52,10 +64,31 @@ public class AutonomousOpMode extends LinearOpMode {
         frntRght = hardwareMap.get(DcMotor.class, "front_right");
         bckLft  = hardwareMap.get(DcMotor.class, "back_left");
         bckRght = hardwareMap.get(DcMotor.class, "back_right");
-        flywheel = hardwareMap.get(DcMotor.class, "flywheel");
+        flywheel = (DcMotorEx)hardwareMap.get(DcMotor.class, "flywheel");
         trigger = hardwareMap.get(Servo.class, "trigger");
+        funnel_trigger = hardwareMap.get(Servo.class, "funnel_trigger");
+        top = hardwareMap.get(ColorSensor.class, "top");
+        bottom = hardwareMap.get(ColorSensor.class, "bottom");
+        
+        wobbleArm = hardwareMap.get(DcMotor.class, "wobble");
+        
+        gripper = hardwareMap.get(Servo.class,"wobble_servo");
+        
+        double[] bottomRGB = {bottom.red(), bottom.green(), bottom.blue()};
+        double[] topRGB = {top.red(), top.green(), top.blue()};
+        
+        bottomRGB = normalizeList(bottomRGB,255);
+        topRGB = normalizeList(topRGB,255);
+        
+        int rings = (bottom.red()>200)? ((top.red()>200)? 4:1) : 0;
 
+
+        flywheel.setMode(DcMotor.RunMode.RESET_ENCODERS);
+       flywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
        
+       PIDCoefficients pidOrig = flywheel.getPIDCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
+       PIDCoefficients newPID = new PIDCoefficients(30,3,0);
+       flywheel.setPIDCoefficients(DcMotor.RunMode.RUN_USING_ENCODERS, newPID);
 
         //Creates New Autonomous Wheel Objects (The file to this class is in this same folder).  
         //Does the calculations for how many turns motor needs to do for robot to go X inches forward
@@ -68,11 +101,17 @@ public class AutonomousOpMode extends LinearOpMode {
         frntRght.setDirection(DcMotor.Direction.REVERSE);
         bckLft.setDirection(DcMotor.Direction.FORWARD);
         bckRght.setDirection(DcMotor.Direction.REVERSE);
+        funnel_trigger.setDirection(Servo.Direction.REVERSE);
+        gripper.setDirection(Servo.Direction.REVERSE);
         
         AutonomousWheelMotor[] movementTemp = {frontLeftDrive, frontRightDrive, backLeftDrive, backRightDrive};
         movement = movementTemp;
 
         telemetry.addData("Status", "Initialized");
+        
+        gripper.setPosition(0);
+        
+        waitForStart();
         //EXAMPLE AUTONOMOUS CODE
 
         //Move Robot forward 8 inches at 50% speed
@@ -84,10 +123,25 @@ public class AutonomousOpMode extends LinearOpMode {
         //Move 8 Inches at -18 Degrees at 50% speed
         //move(-18,8,0.5);
         
-        trigger.setPosition(0);
-        move(0,70,0.5);
-        turn(7,0.5);
-        shoot(0.8);
+        //trigger.setPosition(0);
+        //funnel_trigger.setPosition(0.3);
+        move(0,67,0.5);
+        //turn(20,0.50); 
+        shoot(0.56);
+        move(0,13,0.5);
+        //wobbleArm.setPower(-0.3);
+        //sleep(1000);
+        //gripper.setPosition(0.3);
+        //sleep(1000);
+        //gripper.setPosition(0);
+        //sleep(1000);
+        //wobbleArm.setPower(0.3);
+        //sleep(1000);
+        //move(-90,30,0.2);
+        //shoot(0.56);
+        //move(0,10,0.5);
+        //funnel_trigger.setPosition(0.04);
+        sleep(3000);
         
     }
 
@@ -145,7 +199,7 @@ public class AutonomousOpMode extends LinearOpMode {
      * @param speed a value between 0 and 1 that represents the speed the motors move at to reach their goal
      */
     public void autonomousCommand(AutonomousWheelMotor[] args, double[] inches, double speed) {
-
+        
         //Deleted: if (opModeIsActive()) {
 
         //Calculate Speed and Encoder Target for each motor
@@ -230,13 +284,13 @@ public class AutonomousOpMode extends LinearOpMode {
     {
         int swag = 0;
         flywheel.setPower(-power);
-        sleep(2000);
+        sleep(5000);
         for(int i = 0;i < 3;i++)
         {
-            trigger.setPosition(0.25);
-            sleep(1000);
-            trigger.setPosition(0);
-            sleep(1000);
+            trigger.setPosition(0.3);
+            sleep(2000);
+            trigger.setPosition(0.1);
+            sleep(2000);
         }
         flywheel.setPower(0);
 
@@ -257,9 +311,20 @@ public class AutonomousOpMode extends LinearOpMode {
         return array;
 
     }
+    
+    private double[] normalizeList (double[] input, double max){
+         double biggestdouble = -2;
+         for(double e: input)
+            if (Math.abs(e)> biggestdouble)
+                biggestdouble = Math.abs(e);
+        if (biggestdouble != 0){
+            biggestdouble/= max; // Multipliying in the max
+            for(int i= 0; i<input.length; i++){
+                input[i]/= biggestdouble;
+            }
+        }
+        return input;
+     }
 
 
 }
-
-
-
