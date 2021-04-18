@@ -12,39 +12,26 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-
-@Autonomous(name="Iron Golem Autonomous", group="Mechanum Bot")
-public class AutonomousOpMode extends LinearOpMode {
+@Disabled
+class AutonomousOpMode extends LinearOpMode {
     //ElaspedTime Object allows us to use Time (Unused in this program)
     private ElapsedTime runtime = new ElapsedTime();
 
-    //Initalizing 4 Drive Train Motors
-    DcMotor frntLft;
-    DcMotor frntRght;
-    DcMotor bckLft;
-    DcMotor bckRght;
-    
-    //Initializing Sensors
-    private ColorSensor top = null;
-    private ColorSensor bottom = null;
-    
-    //Initalizing Flywheel
-    DcMotorEx flywheel;
-    Servo trigger;
-    Servo funnel_trigger; 
+    //----------- HARDWARE
+    private RobotHardware robot = new RobotHardware();
 
-    //Creates New Autonomous Wheel Objects (The file to this class is in this same folder).  
+    //Creates New Autonomous Wheel Objects . 
     //Does the calculations for how many turns motor needs to do for robot to go X inches forward
     private AutonomousWheelMotor frontLeftDrive;
     private AutonomousWheelMotor frontRightDrive;
     private AutonomousWheelMotor backLeftDrive;
     private AutonomousWheelMotor backRightDrive;
-    
-    private DcMotor wobbleArm;
-    
-    private Servo gripper = null;
 
-    
+    //The Autonomous Movement Command has been programmed to work with an array of motors so that it can work with
+    //any amount of motors. The movement array is an array of all 4 of our drivetrain motors.
+    private AutonomousWheelMotor[] movement = {frontLeftDrive, frontRightDrive, backLeftDrive, backRightDrive};
+
+    // --------- CONSTANTS
     //When a robot turns in place, its wheels trace a circle. The Diameter of the Circle is the distance between the wheels
     //The wheels have to move the distance along the circle to turn. The follwoing calculates that.
     private final double widthOfRobot = 2.1*16;
@@ -52,66 +39,33 @@ public class AutonomousOpMode extends LinearOpMode {
 
     //Compensates for the gear ratio of the wheels and for slippage in the wheels
     private final double gearAndFrictionConstant = 0.31604;
+    // ----------
 
-    //The Autonomous Movement Command has been programmed to work with an array of motors so that it can work with
-    //any amount of motors. The movement array is an array of all 4 of our drivetrain motors.
-    private AutonomousWheelMotor[] movement;
 
     //------
     @Override
     public void runOpMode() throws InterruptedException { 
-        frntLft  = hardwareMap.get(DcMotor.class, "front_left");
-        frntRght = hardwareMap.get(DcMotor.class, "front_right");
-        bckLft  = hardwareMap.get(DcMotor.class, "back_left");
-        bckRght = hardwareMap.get(DcMotor.class, "back_right");
-        flywheel = (DcMotorEx)hardwareMap.get(DcMotor.class, "flywheel");
-        trigger = hardwareMap.get(Servo.class, "trigger");
-        funnel_trigger = hardwareMap.get(Servo.class, "funnel_trigger");
-        top = hardwareMap.get(ColorSensor.class, "top");
-        bottom = hardwareMap.get(ColorSensor.class, "bottom");
-        
-        wobbleArm = hardwareMap.get(DcMotor.class, "wobble");
-        
-        gripper = hardwareMap.get(Servo.class,"wobble_servo");
-        
-        double[] bottomRGB = {bottom.red(), bottom.green(), bottom.blue()};
-        double[] topRGB = {top.red(), top.green(), top.blue()};
-        
-        bottomRGB = normalizeList(bottomRGB,255);
-        topRGB = normalizeList(topRGB,255);
-        
-        int rings = (bottom.red()>200)? ((top.red()>200)? 4:1) : 0;
+        robot.init();
 
-
-        flywheel.setMode(DcMotor.RunMode.RESET_ENCODERS);
-       flywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-       
-       PIDCoefficients pidOrig = flywheel.getPIDCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
-       PIDCoefficients newPID = new PIDCoefficients(30,3,0);
-       flywheel.setPIDCoefficients(DcMotor.RunMode.RUN_USING_ENCODERS, newPID);
+        robot.frontLeftDrive.setDirection(DcMotor.Direction.FORWARD);
+        robot.backLeftDrive.setDirection(DcMotor.Direction.FORWARD);
+        robot.frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
+        robot.backRightDrive.setDirection(DcMotor.Direction.REVERSE);
 
         //Creates New Autonomous Wheel Objects (The file to this class is in this same folder).  
         //Does the calculations for how many turns motor needs to do for robot to go X inches forward
-        frontLeftDrive = new AutonomousWheelMotor(frntLft, 2240, 2.95276);
-        frontRightDrive = new AutonomousWheelMotor(frntRght, 2240, 2.95276);
-        backLeftDrive = new AutonomousWheelMotor(bckLft, 2240, 2.95276);
-        backRightDrive = new AutonomousWheelMotor(bckRght, 2240, 2.95276);
+        frontLeftDrive = new AutonomousWheelMotor(robot.frontLeftDrive, 2240, 2.95276);
+        frontRightDrive = new AutonomousWheelMotor(robot.frontRightDrive, 2240, 2.95276);
+        backLeftDrive = new AutonomousWheelMotor(robot.backLeftDrive, 2240, 2.95276);
+        backRightDrive = new AutonomousWheelMotor(robot.backRightDrive, 2240, 2.95276);
     
-        frntLft.setDirection(DcMotor.Direction.FORWARD);
-        frntRght.setDirection(DcMotor.Direction.REVERSE);
-        bckLft.setDirection(DcMotor.Direction.FORWARD);
-        bckRght.setDirection(DcMotor.Direction.REVERSE);
-        funnel_trigger.setDirection(Servo.Direction.REVERSE);
-        gripper.setDirection(Servo.Direction.REVERSE);
-        
-        AutonomousWheelMotor[] movementTemp = {frontLeftDrive, frontRightDrive, backLeftDrive, backRightDrive};
-        movement = movementTemp;
-
+    
         telemetry.addData("Status", "Initialized");
         
         gripper.setPosition(0);
         
         waitForStart();
+
         //EXAMPLE AUTONOMOUS CODE
 
         //Move Robot forward 8 inches at 50% speed
@@ -122,26 +76,6 @@ public class AutonomousOpMode extends LinearOpMode {
 
         //Move 8 Inches at -18 Degrees at 50% speed
         //move(-18,8,0.5);
-        
-        //trigger.setPosition(0);
-        //funnel_trigger.setPosition(0.3);
-        move(0,67,0.5);
-        //turn(20,0.50); 
-        shoot(0.56);
-        move(0,13,0.5);
-        //wobbleArm.setPower(-0.3);
-        //sleep(1000);
-        //gripper.setPosition(0.3);
-        //sleep(1000);
-        //gripper.setPosition(0);
-        //sleep(1000);
-        //wobbleArm.setPower(0.3);
-        //sleep(1000);
-        //move(-90,30,0.2);
-        //shoot(0.56);
-        //move(0,10,0.5);
-        //funnel_trigger.setPosition(0.04);
-        sleep(3000);
         
     }
 
@@ -170,7 +104,7 @@ public class AutonomousOpMode extends LinearOpMode {
         }
 
         //Turns every number into a proportional number between 0-1. Used for the speed values, and makes every motor finish at the same time
-        targets = divideByLargestInArray(targets,speed);
+        targets = normalizeList(targets,speed);
 
         //Set The Speeds to each motor
         for (int i = 0; i<args.length; i++) {
@@ -216,7 +150,7 @@ public class AutonomousOpMode extends LinearOpMode {
         }
 
         //Turns every number into a proportional number between 0-1. Used for the speed values, and makes every motor finish at the same time
-        targets = divideByLargestInArray(targets,speed);
+        targets = normalizeList(targets,speed);
 
         //Set The Speeds to each motor
         for (int i = 0; i<args.length; i++) {
@@ -247,7 +181,7 @@ public class AutonomousOpMode extends LinearOpMode {
      * @param bottomRight the amount of inches the top left wheel covers
      * @param speed the speed of all four wheels (0-1)
      */
-    private void manualMove(double topLeft, double topRight, double bottomLeft, double bottomRight, double speed){
+    public void manualMove(double topLeft, double topRight, double bottomLeft, double bottomRight, double speed){
         double inches[] = {topLeft,topRight,bottomLeft,bottomRight};
         autonomousMovementCommand(movement,inches,speed);
     }
@@ -257,7 +191,7 @@ public class AutonomousOpMode extends LinearOpMode {
      * @param degrees the amount of rotation relavtive the current robots rotation
      * @param speed the speed of turning (0-1)
      */
-    private void turn(double degrees,double speed){
+    public void turn(double degrees,double speed){
         double turningInches = robotTurningCircumference * (degrees/360);
         turningInches /= 2;
         double inches[] = {turningInches,-turningInches,turningInches,-turningInches};
@@ -270,7 +204,7 @@ public class AutonomousOpMode extends LinearOpMode {
      * @param inches the distance of movement
      * @param speed the speed of movement (0-1)
      */
-    private void move(double degrees, double inches, double speed){
+    public void move(double degrees, double inches, double speed){
         double robotAngle = Math.toRadians(-degrees) + Math.PI / 4;
         double inchArray[] = {inches * Math.cos(robotAngle),
                               inches * Math.sin(robotAngle),
@@ -280,19 +214,22 @@ public class AutonomousOpMode extends LinearOpMode {
 
     }
 
+     /**
+     * shoot Launches rings out of the robot
+     * @param power power that is sent to flyWheel.
+     */
     public void shoot(double power)
     {
-        int swag = 0;
-        flywheel.setPower(-power);
+        robot.flywheel.setPower(-power);
         sleep(5000);
         for(int i = 0;i < 3;i++)
         {
-            trigger.setPosition(0.3);
+            robot.trigger.setPosition(0.3);
             sleep(2000);
-            trigger.setPosition(0.1);
+            robot.trigger.setPosition(0.1);
             sleep(2000);
         }
-        flywheel.setPower(0);
+        robot.flywheel.setPower(0);
 
     }
     
@@ -312,7 +249,10 @@ public class AutonomousOpMode extends LinearOpMode {
 
     }
     
-    private double[] normalizeList (double[] input, double max){
+    /**
+     * Helper method that converts an array into a 0-1 format
+     */
+    public double[] normalizeList (double[] input, double max){
          double biggestdouble = -2;
          for(double e: input)
             if (Math.abs(e)> biggestdouble)
@@ -325,6 +265,35 @@ public class AutonomousOpMode extends LinearOpMode {
         }
         return input;
      }
+     
+     /**
+     * A class that holds values for the encoders of each motor and the wheel attached to it.
+     */
+    private class AutonomousWheelMotor{
+        DcMotor motor = null;
 
+        double COUNTS_PER_MOTOR_REV;
+        double WHEEL_DIAMETER_INCHES;
+        double COUNTS_PER_INCH;
+
+        /**
+         * Initializes the autonomousWheelMotor
+         * @param incomingMotor a DcMotor that the Autonomous Motor describes.
+         * @param encoderCount the amount of counts that the encoder performs per motor rotation (Google this number).
+         * @param diameter the diameter of the wheel attached to the motor.
+         */
+        public AutonomousWheelMotor(DcMotor incomingMotor, double encoderCount, double diameter){
+            motor = incomingMotor;
+            motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+            COUNTS_PER_MOTOR_REV = encoderCount;
+            WHEEL_DIAMETER_INCHES = diameter;
+
+
+            COUNTS_PER_INCH=(COUNTS_PER_MOTOR_REV)/
+                    (WHEEL_DIAMETER_INCHES*3.1415);
+
+        }
+    }
 
 }
